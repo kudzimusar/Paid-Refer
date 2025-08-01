@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import RoleSelection from "@/pages/role-selection";
+import RoleSetup from "@/pages/role-setup";
 import Home from "@/pages/home";
 import CustomerForm from "@/pages/customer-form";
 import CustomerDashboard from "@/pages/customer-dashboard";
@@ -15,7 +17,7 @@ import Chat from "@/pages/chat";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -25,11 +27,23 @@ function Router() {
     );
   }
 
+  // Check if user needs role setup
+  const needsRoleSetup = isAuthenticated && user && !user.role;
+  const needsProfileSetup = isAuthenticated && user && user.role && 
+    (user.role === 'agent' || user.role === 'referrer') && !user.profile;
+
   return (
     <div className="max-w-sm mx-auto bg-white min-h-screen relative">
       <Switch>
         {!isAuthenticated ? (
-          <Route path="/" component={Landing} />
+          <>
+            <Route path="/" component={RoleSelection} />
+            <Route path="/landing" component={Landing} />
+          </>
+        ) : needsRoleSetup ? (
+          <Route path="*" component={RoleSetup} />
+        ) : needsProfileSetup ? (
+          <Route path="*" component={RoleSetup} />
         ) : (
           <>
             <Route path="/" component={Home} />
@@ -43,7 +57,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
       
-      {isAuthenticated && <BottomNavigation />}
+      {isAuthenticated && !needsRoleSetup && !needsProfileSetup && <BottomNavigation />}
     </div>
   );
 }
