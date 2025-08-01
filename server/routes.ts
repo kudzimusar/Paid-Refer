@@ -77,44 +77,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const request = await storage.createCustomerRequest(requestData);
       
-      // Qualify the lead using AI
-      const qualification = await qualifyLead(request);
+      // TESTING MODE: Skip AI features to avoid quota issues
+      console.log("Request created successfully:", request.id);
       
-      // Find matching agents
-      const allAgents = await storage.getAgentProfiles({
-        areas: requestData.preferredAreas,
-        propertyTypes: requestData.propertyType ? [requestData.propertyType] : undefined
-      });
+      // Simple agent matching without AI (for testing)
+      const allAgents = await storage.getAgentProfiles({});
       
-      const matching = await generateAgentMatching(request, allAgents);
+      console.log("Found agents:", allAgents.length);
       
-      // Create leads for top matching agents
+      // Create simple leads for testing (first 3 agents)
       const leads = [];
-      for (const match of matching.matches.slice(0, 5)) {
+      for (const agent of allAgents.slice(0, 3)) {
         const lead = await storage.createLead({
           customerId: userId,
-          agentId: match.agentId,
+          agentId: agent.userId,
           requestId: request.id,
-          matchScore: match.score / 100,
-          aiSummary: match.reasoning
+          matchScore: "0.8", // Fixed score for testing
+          aiSummary: 'Testing mode - agent matched based on availability'
         });
         leads.push(lead);
         
         // Create notification for agent
         await storage.createNotification({
-          userId: match.agentId,
+          userId: agent.userId,
           title: 'New Lead Match',
-          message: `New customer request matches your expertise: ${requestData.propertyType} in ${requestData.preferredAreas?.join(', ')}`,
+          message: `New customer request: ${requestData.propertyType || 'Property'} in ${requestData.preferredAreas?.join(', ') || 'Tokyo'}`,
           type: 'new_lead',
           metadata: { leadId: lead.id, requestId: request.id }
         });
       }
       
       res.json({ 
-        request, 
-        qualification, 
-        leadCount: leads.length,
-        leads: leads 
+        success: true, 
+        request,
+        leads: leads.length,
+        testingMode: true
       });
     } catch (error) {
       console.error("Error creating customer request:", error);
