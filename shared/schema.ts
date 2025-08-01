@@ -58,7 +58,7 @@ export const customerRequests = pgTable("customer_requests", {
   budgetMax: integer("budget_max"),
   preferredAreas: text("preferred_areas").array(),
   propertyType: propertyTypeEnum("property_type"),
-  moveInDate: timestamp("move_in_date"),
+  moveInDate: varchar("move_in_date"), // Changed to varchar to handle string dates
   occupants: integer("occupants").default(1),
   mustHaveFeatures: text("must_have_features").array(),
   jobVisaType: varchar("job_visa_type"),

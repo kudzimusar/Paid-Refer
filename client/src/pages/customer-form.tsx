@@ -47,7 +47,17 @@ export default function CustomerForm() {
   };
 
   const handlePaymentSubmit = () => {
+    if (!agreeToTerms) {
+      toast({
+        title: "Terms Required",
+        description: "Please agree to the Terms of Service to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (formData) {
+      // TESTING MODE: Skip actual payment processing
       createRequestMutation.mutate({
         ...formData,
         serviceFeepaid: serviceFee,
@@ -70,6 +80,13 @@ export default function CustomerForm() {
       case 'payment':
         return (
           <div className="min-h-screen pt-safe-top pb-20">
+            {/* Testing Mode Banner */}
+            <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+              <p className="text-sm text-blue-700 text-center">
+                🧪 <strong>Testing Mode:</strong> Payment processing is disabled for development testing
+              </p>
+            </div>
+            
             {/* Header */}
             <div className="px-6 py-4 border-b border-neutral-100 bg-white">
               <div className="flex items-center space-x-4">
@@ -122,7 +139,10 @@ export default function CustomerForm() {
                       className="sr-only"
                     />
                     <CreditCard className="w-6 h-6 text-blue-600" />
-                    <span className="text-neutral-900 font-medium">Credit Card</span>
+                    <div>
+                      <span className="text-neutral-900 font-medium">Credit Card</span>
+                      <div className="text-xs text-blue-600 mt-1">Testing mode - No card required</div>
+                    </div>
                   </label>
                   
                   <label 
