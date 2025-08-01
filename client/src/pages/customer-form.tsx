@@ -17,6 +17,7 @@ export default function CustomerForm() {
   const [formData, setFormData] = useState<any>(null);
   const [serviceFee, setServiceFee] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('credit');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const { toast } = useToast();
 
   const createRequestMutation = useMutation({
@@ -95,7 +96,7 @@ export default function CustomerForm() {
                     <label className="flex items-center space-x-2">
                       <Checkbox 
                         checked={serviceFee}
-                        onCheckedChange={setServiceFee}
+                        onCheckedChange={(checked) => setServiceFee(checked === true)}
                       />
                       <span className="text-sm text-neutral-700">Pay service fee</span>
                     </label>
@@ -146,8 +147,12 @@ export default function CustomerForm() {
               {/* Agreement */}
               <Card className="bg-neutral-50">
                 <CardContent className="p-4">
-                  <label className="flex items-start space-x-3">
-                    <Checkbox className="mt-0.5" />
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <Checkbox 
+                      className="mt-0.5" 
+                      checked={agreeToTerms}
+                      onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
+                    />
                     <span className="text-sm text-neutral-600">
                       I agree to the <a href="#" className="text-primary underline">Terms of Service</a> and{' '}
                       <a href="#" className="text-primary underline">Privacy Policy</a>. I consent to being contacted by verified agents.
@@ -158,8 +163,8 @@ export default function CustomerForm() {
 
               <Button 
                 onClick={handlePaymentSubmit}
-                disabled={createRequestMutation.isPending}
-                className="w-full bg-primary text-white py-4 rounded-xl font-semibold"
+                disabled={createRequestMutation.isPending || !agreeToTerms}
+                className="w-full bg-primary text-white py-4 rounded-xl font-semibold disabled:bg-neutral-300 disabled:cursor-not-allowed"
               >
                 {createRequestMutation.isPending ? 'Submitting...' : 'Submit Request'}
               </Button>
