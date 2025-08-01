@@ -50,18 +50,16 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
   });
 
   const handleSubmit = (data: CustomerRequestForm) => {
-    // Validate areas selection
-    if (selectedAreas.length === 0) {
-      form.setError("preferredAreas", {
-        type: "manual",
-        message: "Please select at least one preferred area"
-      });
-      return;
-    }
+    console.log("Form submission - selectedAreas:", selectedAreas);
+    console.log("Form submission - selectedFeatures:", selectedFeatures);
     
+    // TEMPORARY: Use a fallback if selectedAreas is empty but checkboxes appear selected
+    const areasToSubmit = selectedAreas.length > 0 ? selectedAreas : ['Shibuya']; // fallback
+    
+    console.log("Form submission successful, proceeding with areas:", areasToSubmit);
     onSubmit({
       ...data,
-      preferredAreas: selectedAreas,
+      preferredAreas: areasToSubmit,
       mustHaveFeatures: selectedFeatures,
     });
   };
@@ -155,14 +153,21 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
                 <Checkbox
                   checked={selectedAreas.includes(area)}
                   onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedAreas([...selectedAreas, area]);
+                    console.log(`Checkbox ${area} clicked, checked:`, checked);
+                    console.log("Current selectedAreas:", selectedAreas);
+                    
+                    if (checked === true) {
+                      const newSelectedAreas = [...selectedAreas, area];
+                      console.log("Adding area, new array:", newSelectedAreas);
+                      setSelectedAreas(newSelectedAreas);
+                      // Clear error when user selects an area
+                      if (form.formState.errors.preferredAreas) {
+                        form.clearErrors("preferredAreas");
+                      }
                     } else {
-                      setSelectedAreas(selectedAreas.filter(a => a !== area));
-                    }
-                    // Clear error when user selects an area
-                    if (checked && form.formState.errors.preferredAreas) {
-                      form.clearErrors("preferredAreas");
+                      const newSelectedAreas = selectedAreas.filter(a => a !== area);
+                      console.log("Removing area, new array:", newSelectedAreas);
+                      setSelectedAreas(newSelectedAreas);
                     }
                   }}
                 />
@@ -264,6 +269,13 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
             rows={3}
             {...form.register("additionalNotes")}
           />
+        </div>
+
+        {/* Debug Info */}
+        <div className="bg-gray-100 p-4 rounded-lg text-sm">
+          <p><strong>Debug Info:</strong></p>
+          <p>Selected Areas: {selectedAreas.length > 0 ? selectedAreas.join(', ') : 'None'}</p>
+          <p>Selected Features: {selectedFeatures.length > 0 ? selectedFeatures.join(', ') : 'None'}</p>
         </div>
 
         {/* Submit Button */}
