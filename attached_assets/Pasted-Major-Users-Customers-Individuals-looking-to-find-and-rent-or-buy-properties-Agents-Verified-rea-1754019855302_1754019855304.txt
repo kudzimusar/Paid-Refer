@@ -1,0 +1,43 @@
+Major Users
+Customers: Individuals looking to find and rent or buy properties.
+
+Agents: Verified real estate professionals who receive and respond to customer requests.
+
+Referrers: Individuals who generate and share unique referral links for clients seeking properties.
+
+Admin: The platform manager who oversees operations, manages users, and handles lead broadcasting.
+
+Communication and Messaging
+Customers:
+
+Submitting Requests: They communicate their housing needs by filling out a detailed form within the app.
+
+Receiving Updates: They receive in-app notifications and status updates on their requests, such as "Sent to X agents," "Y agents viewed," and "Z agents contacted you."
+
+Direct Communication: Once an agent expresses interest and the customer consents, they can initiate a secure in-app chat with the interested agents. They can also specify their preferred contact method (WhatsApp, LINE, Email) for agents to reach out.
+
+Agents:
+
+Receiving Leads: Agents receive real-time alerts and broadcasts of matching customer requests, either directly within their in-app dashboard or via their preferred messaging platforms like LINE, WhatsApp, or Messenger.
+
+Responding to Customers: They can respond to customer requests through the app's backend or a facilitated chatbot. If a lead is accepted, they get the customer's full contact info to reach out via the customer's preferred messaging platform.
+
+In-App Chat: They can communicate directly with interested customers via the in-app chat feature.
+
+Status Updates: They confirm deal statuses (e.g., "in contact," "closed deal") within their dashboard, which updates the system and referrer.
+
+Referrers:
+
+Sharing Messages: Their primary method of sharing is by generating and distributing unique referral links via social media, WhatsApp, LINE, Facebook Messenger, SMS, or QR code.
+
+Receiving Notifications: They receive in-app notifications when their generated referral links lead to a customer submission (e.g., "Your referral has been submitted!").
+
+Tracking Status: They can track the status of their referrals (clicked, form submitted, agent contacted, deal closed) and view accumulated earnings in their dashboard.
+
+Admin:
+
+Broadcasting Leads: The admin uses a manual broadcast tool to select customers and choose agents to send leads to.
+
+Monitoring Communications: All replies and interactions between agents and customers are logged and visible in the admin dashboard for oversight.
+
+Notifications & Alerts: The admin manages user accounts, payment flows, and receives system alerts, potentially utilizing message templates for communications.

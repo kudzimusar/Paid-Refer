@@ -1,0 +1,124 @@
+```
+REFER APP: COMPREHENSIVE NATIVE REACT APPLICATION PROMPT FOR REPLIT
+
+You are an expert React Native developer and AI application specialist. Your task is to build the complete, holistic "Refer" mobile application from the ground up. This application is designed to be a fully functional, intuitive, and AI-enhanced platform that seamlessly connects renters, verified real estate agents, and casual referrers. This is a **native React application** (built using React Native) with a strong emphasis on a clean, "easy on the eye," and "easy to move around" user experience.
+
+The application should be architected for scalability, maintainability, and deep integration with modern services.
+
+1.  **APP VISION & CORE PRINCIPLES:**
+
+    1.1.  **App Name:** Refer
+    1.2.  **Application Type:** Native Mobile Application built with **React Native**.
+    1.3.  **Core Goal:** To simplify the process of finding an apartment by directly connecting customers with suitable agents, leveraging a referral system powered by casual referrers, and enhancing all interactions with intelligent AI.
+    1.4.  **Design Philosophy ("Easy on Eye, Easy to Move Around"):**
+        * **Aesthetics:** Minimalist, clean, and modern UI. Use ample whitespace, clear typography, and a subtle, low-opacity (approx. 4%) gradient background across main screens to add depth without clutter.
+        * **Navigation:** Intuitive and consistent navigation (e.g., bottom tab bar for primary sections, clear back buttons, smooth transitions).
+        * **Accessibility:** Design for ease of use with touch gestures, clear tap targets, and legible text sizes.
+        * **Responsiveness:** Fluid layouts that adapt seamlessly across various mobile device screen sizes.
+
+2.  **TECHNICAL STACK:**
+
+    2.1.  **Frontend:** React Native.
+    2.2.  **Styling:** Tailwind CSS (configured for React Native, e.g., `tailwindcss-react-native`).
+    2.3.  **UI Components:** `shadcn/ui` (adapted for React Native or similar native-friendly component library adhering to shadcn aesthetics) for buttons, cards, forms, dialogs, etc.
+    2.4.  **Icons:** `lucide-react-native` (or a similar native icon library for consistent iconography).
+    2.5.  **Backend & Database:** Firebase (Authentication, Firestore for database, Cloud Functions for server-side logic and AI orchestrations).
+    2.6.  **AI Integration:** Deep integration with Google's Generative AI models (Gemini API) via Firebase Cloud Functions where server-side processing is beneficial.
+    2.7.  **External APIs:**
+        * Payment Gateway: Integration points for Stripe/PayPay/Square for secure payment processing.
+        * Messaging Platforms: LINE, WhatsApp, Facebook Messenger APIs for agent-customer communication.
+        * Mapping/GPS: Google Maps API or similar for location services.
+
+3.  **USER ROLES & AUTHENTICATION:**
+
+    3.1.  **Roles:** Guest, Customer, Agent, Referrer, Admin.
+    3.2.  **Authentication:** Firebase Authentication (Email/Password, Google Sign-In, LINE/FB for social login). Role-based access control (RBAC) should differentiate permissions.
+
+4.  **CORE APPLICATION SCREENS & FUNCTIONALITIES:**
+
+    4.1.  **Home Page (Public):**
+        * Subtle "Refer" branding at the top (no large header bar).
+        * Prominent tagline: **"We connect renters with trusted agents — instantly."**
+        * Three primary, distinct CTAs: "Find an Apartment" (Customer), "I'm an Agent" (Agent Signup), "I'm a Referrer" (Referrer Signup/Dashboard).
+        * "How Refer Works" section with concise feature cards.
+        * Subtle links for "How It Works" and "Pricing & FAQ."
+
+    4.2.  **Customer Workflow:**
+        * **Customer Form Page:** Detailed form: Name, Contact Info (email/phone), **Preferred Contact Method (Dropdown)**, **Budget Range (Min/Max Slider or dual input fields)**, **Areas (GPS-enhanced Location Dropdown/Search with suggestions)**, **Property Type (Dropdown)**, Move-in Date, Occupants, Must-have Features (checkboxes), Job/Visa Type, Notes, File Upload (optional), Consent Checkbox.
+        * **Payment Flow:** Integrated payment gateway dialog (Stripe/PayPay/Square) for optional customer entry fee (e.g., ¥300).
+        * **Customer Dashboard:** Private, login-required.
+            * **Request Summary:** View/edit details.
+            * **Status Tracker:** Real-time updates (sent to X agents, Y agents viewed, Z agents contacted).
+            * **Agent Contacts:** View interested agents, initiate in-app chat.
+            * **Saved Properties/Agents:** Manage saved items.
+
+    4.3.  **Agent Workflow:**
+        * **Agent Sign-up Page:** Name, Email/Mobile, Preferred Messaging App, License Number + **License Upload (actual file upload)**, **Areas Covered (Multi-select/Searchable Input)**, **Property Types (Multi-select)**, **Languages Spoken (Multi-select)**, Agreement Checkbox.
+        * **Agent Dashboard:** Private, login-required.
+            * **New Leads:** Real-time alerts for matching customer requests.
+            * **My Leads/Deals:** Track active and closed deals.
+            * **In-App Chat:** Communicate with interested customers.
+            * **Deal Confirmation:** Feature to mark leads as "in contact" or "closed deal" for referral fee tracking.
+            * **Profile Management:** Edit specializations, availability.
+
+    4.4.  **Referrer Workflow:**
+        * **Referrer Sign-up Page:** Name, Email, Phone, Bank/E-wallet details for payout, Preferred Reward Method.
+        * **Referral Link Generator:**
+            * **Form:** Referrer ID (auto-filled), **Type of Request (Dropdown)**, **Prefecture/Area (GPS-enhanced Location Dropdown/Search)**, **Apartment Type/Category (Dropdown + Notes)**.
+            * **AI-Powered Link Generation:** Generates a unique, short, pre-filled link via Gemini API call.
+            * **Link Sharing:** Direct share options (WhatsApp, LINE, SMS, Email, QR code).
+        * **Referral Dashboard:** Private, login-required.
+            * **Generated Links List:** View all links, their creation date, and status (clicked, form submitted, agent contacted, deal closed).
+            * **Earnings & Rewards Wallet:** Track points/cash earned, initiate payouts.
+            * **Leaderboard:** See top referrers (gamification).
+
+5.  **ADVANCED AI APPLICATIONS (Deep Integration via Firebase Cloud Functions & Gemini API):**
+
+    5.1.  **AI-Powered Smart Matching (Customer-to-Agent):**
+        * **Mechanism:** Analyze customer's explicit and implicit preferences (from detailed request, notes, past interactions) against agent profiles (specializations, areas, languages, historical success rates, current workload). Use Gemini to find the optimal agent subset.
+        * **Benefit:** Highly accurate matches, reducing irrelevant leads and improving conversion rates.
+
+    5.2.  **AI-Driven Lead Qualification & Prioritization (for Agents/Admin):**
+        * **Mechanism:** Assign a dynamic "lead score" to each incoming customer request based on completeness, urgency keywords, budget realism, and historical data of similar requests. Prioritize higher-scoring leads for agents.
+        * **Benefit:** Agents focus on most promising leads; Admin can better manage broadcast volume.
+
+    5.3.  **AI-Generated Communication Suggestions:**
+        * **Mechanism:** For agents responding to new leads or customers, and referrers following up, provide context-aware, AI-drafted response suggestions. Example: "Hi [Customer Name], I have a 1LDK in [Area] that matches your criteria..."
+        * **Benefit:** Saves time, ensures professional and personalized communication.
+
+    5.4.  **AI-Enhanced Property Search & Recommendations (Customer):**
+        * **Mechanism:** Beyond initial filters, AI suggests similar properties, alternative areas, or refines search criteria based on user interaction patterns, saving behavior, and broader market trends.
+        * **Benefit:** Helps customers discover more suitable options, increasing engagement.
+
+    5.5.  **AI for Fraud/Abuse Detection (Referral Links/Agent Activity):**
+        * **Mechanism:** Monitor unusual patterns in referral link clicks/submissions, agent response times, or deal confirmations. Flag suspicious activities for admin review.
+        * **Benefit:** Maintains the integrity and fairness of the platform.
+
+    5.6.  **AI-Summarized Requests/Lead Briefs:**
+        * **Mechanism:** Automatically generate a concise, bullet-point summary of complex customer requests for agents, highlighting key requirements, budget, and urgency.
+        * **Benefit:** Agents can quickly grasp lead essentials, leading to faster and more relevant responses.
+
+    5.7.  **AI-Powered Market Insights (New Creative Feature):**
+        * **Mechanism:** For agents and admins, offer simple AI-generated insights on market trends, average rental prices in specific areas, or popular property types based on aggregated data (e.g., "Rental prices in Shibuya increased 5% last quarter for 1K apartments.").
+        * **Benefit:** Provides valuable, data-driven information to support decision-making.
+
+6.  **ADMIN DASHBOARD (Full Access - Web/Mobile):**
+
+    * **User Management:** View, approve, suspend Customers, Agents, Referrers.
+    * **Request Management:** View all customer requests (searchable, editable), manually broadcast leads.
+    * **Payment Management:** Track customer fees, agent referral fees, manage payouts to referrers.
+    * **Content Management:** Message templates, FAQ/Pricing content.
+    * **System Alerts:** Monitor platform health, AI performance.
+    * **RBAC Configuration:** Manage roles and permissions.
+
+**DELIVERABLE:**
+
+Generate the complete **React Native application code** for "Refer." This includes:
+* Project structure with all necessary components and screens.
+* Firebase initialization and integration code (Authentication, Firestore, Cloud Functions placeholders).
+* Implementation of all specified UI/UX elements and features.
+* Mock/placeholder implementations for all AI-powered functionalities, clearly indicating where Gemini API calls and Cloud Functions would be integrated.
+* Comprehensive data models for Firestore collections (Customers, Agents, Referrers, Requests, ReferralLinks, Payments, Notifications).
+* Responsive design and styling using Tailwind CSS.
+* Well-commented code for clarity.
+```
