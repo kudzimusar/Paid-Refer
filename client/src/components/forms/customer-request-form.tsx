@@ -50,6 +50,15 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
   });
 
   const handleSubmit = (data: CustomerRequestForm) => {
+    // Validate areas selection
+    if (selectedAreas.length === 0) {
+      form.setError("preferredAreas", {
+        type: "manual",
+        message: "Please select at least one preferred area"
+      });
+      return;
+    }
+    
     onSubmit({
       ...data,
       preferredAreas: selectedAreas,
@@ -119,7 +128,10 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
 
         {/* Areas Section */}
         <div>
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Preferred Areas</h3>
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+            Preferred Areas <span className="text-red-500">*</span>
+          </h3>
+          <p className="text-sm text-neutral-600 mb-4">Select at least one area where you'd like to live</p>
           <div className="relative mb-4">
             <Input
               placeholder="Search areas (e.g., Shibuya, Shinjuku)"
@@ -127,6 +139,9 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
             />
             <MapPin className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
           </div>
+          {form.formState.errors.preferredAreas && (
+            <p className="text-red-500 text-sm mb-2">{form.formState.errors.preferredAreas.message}</p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {commonAreas.map((area) => (
               <label
@@ -145,19 +160,30 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
                     } else {
                       setSelectedAreas(selectedAreas.filter(a => a !== area));
                     }
+                    // Clear error when user selects an area
+                    if (checked && form.formState.errors.preferredAreas) {
+                      form.clearErrors("preferredAreas");
+                    }
                   }}
                 />
                 <span className="text-sm text-neutral-700">{area}</span>
               </label>
             ))}
           </div>
+          {selectedAreas.length > 0 && (
+            <p className="text-sm text-primary mt-2">
+              Selected: {selectedAreas.join(', ')}
+            </p>
+          )}
         </div>
 
         {/* Property Type */}
         <div>
-          <Label htmlFor="propertyType">Property Type</Label>
+          <Label htmlFor="propertyType">
+            Property Type <span className="text-red-500">*</span>
+          </Label>
           <Select onValueChange={(value) => form.setValue("propertyType", value as any)}>
-            <SelectTrigger>
+            <SelectTrigger className={form.formState.errors.propertyType ? "border-red-500" : ""}>
               <SelectValue placeholder="Select property type" />
             </SelectTrigger>
             <SelectContent>
@@ -170,6 +196,9 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
               <SelectItem value="3K+">3K+</SelectItem>
             </SelectContent>
           </Select>
+          {form.formState.errors.propertyType && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.propertyType.message}</p>
+          )}
         </div>
 
         {/* Move-in Date and Occupants */}
