@@ -16,8 +16,8 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 const customerRequestSchema = z.object({
   budgetMin: z.number().min(0),
   budgetMax: z.number().min(0),
-  preferredAreas: z.array(z.string()).min(1, "Please select at least one area"),
-  propertyType: z.enum(['1K', '1DK', '1LDK', '2K', '2DK', '2LDK', '3K+']),
+  preferredAreas: z.array(z.string()).optional(), // Remove validation here
+  propertyType: z.enum(['1K', '1DK', '1LDK', '2K', '2DK', '2LDK', '3K+']).optional(), // Make optional for now
   moveInDate: z.string().optional(),
   occupants: z.number().min(1).max(10),
   mustHaveFeatures: z.array(z.string()).optional(),
@@ -52,15 +52,37 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
   const handleSubmit = (data: CustomerRequestForm) => {
     console.log("Form submission - selectedAreas:", selectedAreas);
     console.log("Form submission - selectedFeatures:", selectedFeatures);
+    console.log("Form data:", data);
     
-    // TEMPORARY: Use a fallback if selectedAreas is empty but checkboxes appear selected
-    const areasToSubmit = selectedAreas.length > 0 ? selectedAreas : ['Shibuya']; // fallback
+    // Clear any existing errors
+    form.clearErrors();
     
-    console.log("Form submission successful, proceeding with areas:", areasToSubmit);
+    // Validate areas selection
+    if (selectedAreas.length === 0) {
+      console.log("Validation failed: No areas selected");
+      form.setError("preferredAreas", {
+        type: "manual",
+        message: "Please select at least one preferred area"
+      });
+      return;
+    }
+    
+    // Validate property type
+    if (!data.propertyType) {
+      console.log("Validation failed: No property type selected");
+      form.setError("propertyType", {
+        type: "manual", 
+        message: "Please select a property type"
+      });
+      return;
+    }
+    
+    console.log("Form submission successful, proceeding with areas:", selectedAreas);
     onSubmit({
       ...data,
-      preferredAreas: areasToSubmit,
+      preferredAreas: selectedAreas,
       mustHaveFeatures: selectedFeatures,
+      propertyType: data.propertyType, // Ensure property type is included
     });
   };
 
@@ -272,10 +294,11 @@ export function CustomerRequestForm({ onSubmit, onBack, step, totalSteps }: Cust
         </div>
 
         {/* Debug Info */}
-        <div className="bg-gray-100 p-4 rounded-lg text-sm">
-          <p><strong>Debug Info:</strong></p>
-          <p>Selected Areas: {selectedAreas.length > 0 ? selectedAreas.join(', ') : 'None'}</p>
-          <p>Selected Features: {selectedFeatures.length > 0 ? selectedFeatures.join(', ') : 'None'}</p>
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-sm">
+          <p><strong>🔍 Debug Info:</strong></p>
+          <p>Selected Areas ({selectedAreas.length}): {selectedAreas.length > 0 ? selectedAreas.join(', ') : '❌ None selected'}</p>
+          <p>Selected Features ({selectedFeatures.length}): {selectedFeatures.length > 0 ? selectedFeatures.join(', ') : 'None'}</p>
+          <p>Form Errors: {Object.keys(form.formState.errors).length > 0 ? Object.keys(form.formState.errors).join(', ') : 'None'}</p>
         </div>
 
         {/* Submit Button */}
