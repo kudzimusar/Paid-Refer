@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -46,25 +44,6 @@ export default function RoleSetup() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState<string>('');
-
-  useEffect(() => {
-    const role = localStorage.getItem('selectedRole');
-    if (role) {
-      setSelectedRole(role);
-      // Set the role via API
-      apiRequest('POST', '/api/auth/set-role', { role })
-        .catch(error => {
-          console.error('Failed to set role:', error);
-          toast({
-            title: "Error",
-            description: "Failed to set user role. Please try again.",
-            variant: "destructive",
-          });
-        });
-      localStorage.removeItem('selectedRole');
-    }
-  }, []);
 
   const agentForm = useForm<AgentSetup>({
     resolver: zodResolver(agentSetupSchema),
@@ -142,17 +121,16 @@ export default function RoleSetup() {
   }
 
   if (!user) {
-    setLocation('/role-selection');
+    setLocation('/');
     return null;
   }
 
-  if (!selectedRole && !user.role) {
-    setLocation('/role-selection');
+  if (!user.role || (user.role !== 'agent' && user.role !== 'referrer')) {
+    setLocation('/');
     return null;
   }
 
-  // If user already has a role but no selectedRole, use the user's role
-  const currentRole = selectedRole || user.role;
+  const currentRole = user.role;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">

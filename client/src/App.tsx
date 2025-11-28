@@ -1,9 +1,11 @@
 import { Switch, Route } from "wouter";
+import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import RoleSelection from "@/pages/role-selection";
@@ -18,8 +20,32 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [pendingRole, setPendingRole] = useState<string | null>(null);
+  const [roleProcessing, setRoleProcessing] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (isAuthenticated && !roleProcessing) {
+      const selectedRole = localStorage.getItem('selectedRole');
+      if (selectedRole) {
+        setPendingRole(selectedRole);
+        setRoleProcessing(true);
+        
+        apiRequest('POST', '/api/auth/set-role', { role: selectedRole })
+          .then(() => {
+            localStorage.removeItem('selectedRole');
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+            setRoleProcessing(false);
+          })
+          .catch((error) => {
+            console.error('Failed to set role:', error);
+            localStorage.removeItem('selectedRole');
+            setRoleProcessing(false);
+          });
+      }
+    }
+  }, [isAuthenticated, roleProcessing]);
+
+  if (isLoading || roleProcessing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -27,10 +53,11 @@ function Router() {
     );
   }
 
-  // Check if user needs role setup
-  const needsRoleSetup = isAuthenticated && user && !user.role;
-  const needsProfileSetup = isAuthenticated && user && user.role && 
-    (user.role === 'agent' || user.role === 'referrer') && !user.profile;
+  const userRole = user?.role;
+  const effectiveRole = pendingRole || userRole;
+  
+  const needsProfileSetup = isAuthenticated && user && effectiveRole && 
+    (effectiveRole === 'agent' || effectiveRole === 'referrer') && !user.profile;
 
   return (
     <div className="max-w-sm mx-auto bg-white min-h-screen relative">
@@ -40,8 +67,6 @@ function Router() {
             <Route path="/" component={RoleSelection} />
             <Route path="/landing" component={Landing} />
           </>
-        ) : needsRoleSetup ? (
-          <Route path="*" component={RoleSetup} />
         ) : needsProfileSetup ? (
           <Route path="*" component={RoleSetup} />
         ) : (
@@ -57,7 +82,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
       
-      {isAuthenticated && !needsRoleSetup && !needsProfileSetup && <BottomNavigation />}
+      {isAuthenticated && !needsProfileSetup && <BottomNavigation />}
     </div>
   );
 }

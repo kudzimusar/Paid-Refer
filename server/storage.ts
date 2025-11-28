@@ -1,15 +1,4 @@
 import {
-  users,
-  customerRequests,
-  agentProfiles,
-  referrerProfiles,
-  referralLinks,
-  leads,
-  conversations,
-  messages,
-  properties,
-  payments,
-  notifications,
   type User,
   type UpsertUser,
   type CustomerRequest,
@@ -33,58 +22,48 @@ import {
   type Notification,
   type InsertNotification,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, asc, count, sql, or, like, gte, lte, inArray } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
   
-  // Customer operations
   createCustomerRequest(request: InsertCustomerRequest): Promise<CustomerRequest>;
   getCustomerRequest(id: string): Promise<CustomerRequest | undefined>;
   getCustomerRequestsByUser(userId: string): Promise<CustomerRequest[]>;
   updateCustomerRequest(id: string, updates: Partial<CustomerRequest>): Promise<CustomerRequest>;
   
-  // Agent operations
   createAgentProfile(profile: InsertAgentProfile): Promise<AgentProfile>;
   getAgentProfile(userId: string): Promise<AgentProfile | undefined>;
   getAgentProfiles(filters?: { areas?: string[], propertyTypes?: string[] }): Promise<AgentProfile[]>;
   updateAgentProfile(userId: string, updates: Partial<AgentProfile>): Promise<AgentProfile>;
   
-  // Referrer operations
   createReferrerProfile(profile: InsertReferrerProfile): Promise<ReferrerProfile>;
   getReferrerProfile(userId: string): Promise<ReferrerProfile | undefined>;
   updateReferrerProfile(userId: string, updates: Partial<ReferrerProfile>): Promise<ReferrerProfile>;
   
-  // Referral link operations
   createReferralLink(link: InsertReferralLink): Promise<ReferralLink>;
   getReferralLink(id: string): Promise<ReferralLink | undefined>;
   getReferralLinkByShortCode(shortCode: string): Promise<ReferralLink | undefined>;
   getReferralLinksByReferrer(referrerId: string): Promise<ReferralLink[]>;
   updateReferralLink(id: string, updates: Partial<ReferralLink>): Promise<ReferralLink>;
   
-  // Lead operations
   createLead(lead: InsertLead): Promise<Lead>;
   getLead(id: string): Promise<Lead | undefined>;
   getLeadsByAgent(agentId: string): Promise<Lead[]>;
   getLeadsByCustomer(customerId: string): Promise<Lead[]>;
   updateLead(id: string, updates: Partial<Lead>): Promise<Lead>;
   
-  // Conversation operations
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   getConversation(id: string): Promise<Conversation | undefined>;
   getConversationsByUser(userId: string): Promise<Conversation[]>;
   updateConversation(id: string, updates: Partial<Conversation>): Promise<Conversation>;
   
-  // Message operations
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesByConversation(conversationId: string): Promise<Message[]>;
   markMessageAsRead(id: string): Promise<Message>;
   
-  // Property operations
   createProperty(property: InsertProperty): Promise<Property>;
   getProperty(id: string): Promise<Property | undefined>;
   getPropertiesByAgent(agentId: string): Promise<Property[]>;
@@ -96,247 +75,371 @@ export interface IStorage {
   }): Promise<Property[]>;
   updateProperty(id: string, updates: Partial<Property>): Promise<Property>;
   
-  // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   getPayment(id: string): Promise<Payment | undefined>;
   getPaymentsByUser(userId: string): Promise<Payment[]>;
   updatePayment(id: string, updates: Partial<Payment>): Promise<Payment>;
   
-  // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
 }
 
-export class DatabaseStorage implements IStorage {
-  // User operations
+export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
+  private customerRequests: Map<string, CustomerRequest> = new Map();
+  private agentProfiles: Map<string, AgentProfile> = new Map();
+  private referrerProfiles: Map<string, ReferrerProfile> = new Map();
+  private referralLinks: Map<string, ReferralLink> = new Map();
+  private leads: Map<string, Lead> = new Map();
+  private conversations: Map<string, Conversation> = new Map();
+  private messages: Map<string, Message> = new Map();
+  private properties: Map<string, Property> = new Map();
+  private payments: Map<string, Payment> = new Map();
+  private notifications: Map<string, Notification> = new Map();
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return this.users.get(id);
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    const existing = this.users.get(userData.id!);
+    const now = new Date();
+    const user: User = {
+      id: userData.id!,
+      email: userData.email ?? existing?.email ?? null,
+      firstName: userData.firstName ?? existing?.firstName ?? null,
+      lastName: userData.lastName ?? existing?.lastName ?? null,
+      profileImageUrl: userData.profileImageUrl ?? existing?.profileImageUrl ?? null,
+      role: existing?.role ?? "customer",
+      phone: existing?.phone ?? null,
+      preferredContactMethod: existing?.preferredContactMethod ?? null,
+      isVerified: existing?.isVerified ?? false,
+      stripeCustomerId: existing?.stripeCustomerId ?? null,
+      stripeSubscriptionId: existing?.stripeSubscriptionId ?? null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.users.set(user.id, user);
     return user;
   }
 
   async updateUserRole(userId: string, role: string): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ role: role as any, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning();
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    user.role = role as any;
+    user.updatedAt = new Date();
+    this.users.set(userId, user);
     return user;
   }
 
-  // Customer operations
   async createCustomerRequest(request: InsertCustomerRequest): Promise<CustomerRequest> {
-    const [created] = await db.insert(customerRequests).values(request).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: CustomerRequest = {
+      id,
+      customerId: request.customerId,
+      preferredAreas: request.preferredAreas ?? null,
+      propertyType: request.propertyType ?? null,
+      budgetMin: request.budgetMin ?? null,
+      budgetMax: request.budgetMax ?? null,
+      moveInDate: request.moveInDate ?? null,
+      occupants: request.occupants ?? 1,
+      mustHaveFeatures: request.mustHaveFeatures ?? null,
+      jobVisaType: request.jobVisaType ?? null,
+      additionalNotes: request.additionalNotes ?? null,
+      status: "active",
+      serviceFeepaid: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.customerRequests.set(id, created);
     return created;
   }
 
   async getCustomerRequest(id: string): Promise<CustomerRequest | undefined> {
-    const [request] = await db.select().from(customerRequests).where(eq(customerRequests.id, id));
-    return request;
+    return this.customerRequests.get(id);
   }
 
   async getCustomerRequestsByUser(userId: string): Promise<CustomerRequest[]> {
-    return await db.select().from(customerRequests)
-      .where(eq(customerRequests.customerId, userId))
-      .orderBy(desc(customerRequests.createdAt));
+    return Array.from(this.customerRequests.values())
+      .filter(r => r.customerId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async updateCustomerRequest(id: string, updates: Partial<CustomerRequest>): Promise<CustomerRequest> {
-    const [updated] = await db.update(customerRequests)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(customerRequests.id, id))
-      .returning();
+    const request = this.customerRequests.get(id);
+    if (!request) throw new Error("Customer request not found");
+    const updated = { ...request, ...updates, updatedAt: new Date() };
+    this.customerRequests.set(id, updated);
     return updated;
   }
 
-  // Agent operations
   async createAgentProfile(profile: InsertAgentProfile): Promise<AgentProfile> {
-    const [created] = await db.insert(agentProfiles).values(profile).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: AgentProfile = {
+      id,
+      userId: profile.userId,
+      licenseNumber: profile.licenseNumber,
+      licenseUploadUrl: profile.licenseUploadUrl ?? null,
+      areasCovered: profile.areasCovered ?? null,
+      propertyTypes: profile.propertyTypes ?? null,
+      languagesSpoken: profile.languagesSpoken ?? null,
+      specializations: profile.specializations ?? null,
+      rating: "0.0",
+      totalReviews: 0,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.agentProfiles.set(profile.userId, created);
     return created;
   }
 
   async getAgentProfile(userId: string): Promise<AgentProfile | undefined> {
-    const [profile] = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, userId));
-    return profile;
+    return this.agentProfiles.get(userId);
   }
 
   async getAgentProfiles(filters?: { areas?: string[], propertyTypes?: string[] }): Promise<AgentProfile[]> {
-    // Simplified for testing - just return all active agents
-    return await db.select().from(agentProfiles)
-      .where(eq(agentProfiles.isActive, true))
-      .orderBy(desc(agentProfiles.rating));
+    return Array.from(this.agentProfiles.values()).filter(p => p.isActive);
   }
 
   async updateAgentProfile(userId: string, updates: Partial<AgentProfile>): Promise<AgentProfile> {
-    const [updated] = await db.update(agentProfiles)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(agentProfiles.userId, userId))
-      .returning();
+    const profile = this.agentProfiles.get(userId);
+    if (!profile) throw new Error("Agent profile not found");
+    const updated = { ...profile, ...updates, updatedAt: new Date() };
+    this.agentProfiles.set(userId, updated);
     return updated;
   }
 
-  // Referrer operations
   async createReferrerProfile(profile: InsertReferrerProfile): Promise<ReferrerProfile> {
-    const [created] = await db.insert(referrerProfiles).values(profile).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: ReferrerProfile = {
+      id,
+      userId: profile.userId,
+      bankDetails: profile.bankDetails ?? null,
+      ewalletDetails: profile.ewalletDetails ?? null,
+      preferredRewardMethod: profile.preferredRewardMethod ?? null,
+      totalEarnings: "0.00",
+      availableBalance: "0.00",
+      totalReferrals: 0,
+      successfulReferrals: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.referrerProfiles.set(profile.userId, created);
     return created;
   }
 
   async getReferrerProfile(userId: string): Promise<ReferrerProfile | undefined> {
-    const [profile] = await db.select().from(referrerProfiles).where(eq(referrerProfiles.userId, userId));
-    return profile;
+    return this.referrerProfiles.get(userId);
   }
 
   async updateReferrerProfile(userId: string, updates: Partial<ReferrerProfile>): Promise<ReferrerProfile> {
-    const [updated] = await db.update(referrerProfiles)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(referrerProfiles.userId, userId))
-      .returning();
+    const profile = this.referrerProfiles.get(userId);
+    if (!profile) throw new Error("Referrer profile not found");
+    const updated = { ...profile, ...updates, updatedAt: new Date() };
+    this.referrerProfiles.set(userId, updated);
     return updated;
   }
 
-  // Referral link operations
   async createReferralLink(link: InsertReferralLink): Promise<ReferralLink> {
-    const [created] = await db.insert(referralLinks).values(link).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: ReferralLink = {
+      id,
+      referrerId: link.referrerId,
+      shortCode: link.shortCode,
+      requestType: link.requestType ?? null,
+      targetArea: link.targetArea ?? null,
+      apartmentType: link.apartmentType ?? null,
+      notes: link.notes ?? null,
+      clickCount: 0,
+      submissionCount: 0,
+      conversionCount: 0,
+      isActive: true,
+      expiresAt: link.expiresAt ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.referralLinks.set(id, created);
     return created;
   }
 
   async getReferralLink(id: string): Promise<ReferralLink | undefined> {
-    const [link] = await db.select().from(referralLinks).where(eq(referralLinks.id, id));
-    return link;
+    return this.referralLinks.get(id);
   }
 
   async getReferralLinkByShortCode(shortCode: string): Promise<ReferralLink | undefined> {
-    const [link] = await db.select().from(referralLinks).where(eq(referralLinks.shortCode, shortCode));
-    return link;
+    return Array.from(this.referralLinks.values()).find(l => l.shortCode === shortCode);
   }
 
   async getReferralLinksByReferrer(referrerId: string): Promise<ReferralLink[]> {
-    return await db.select().from(referralLinks)
-      .where(eq(referralLinks.referrerId, referrerId))
-      .orderBy(desc(referralLinks.createdAt));
+    return Array.from(this.referralLinks.values())
+      .filter(l => l.referrerId === referrerId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async updateReferralLink(id: string, updates: Partial<ReferralLink>): Promise<ReferralLink> {
-    const [updated] = await db.update(referralLinks)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(referralLinks.id, id))
-      .returning();
+    const link = this.referralLinks.get(id);
+    if (!link) throw new Error("Referral link not found");
+    const updated = { ...link, ...updates, updatedAt: new Date() };
+    this.referralLinks.set(id, updated);
     return updated;
   }
 
-  // Lead operations
   async createLead(lead: InsertLead): Promise<Lead> {
-    const [created] = await db.insert(leads).values(lead).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Lead = {
+      id,
+      customerId: lead.customerId,
+      agentId: lead.agentId,
+      requestId: lead.requestId,
+      status: "pending",
+      matchScore: lead.matchScore ?? null,
+      aiSummary: lead.aiSummary ?? null,
+      agentNotes: null,
+      lastContactAt: null,
+      closedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.leads.set(id, created);
     return created;
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-    return lead;
+    return this.leads.get(id);
   }
 
   async getLeadsByAgent(agentId: string): Promise<Lead[]> {
-    return await db.select().from(leads)
-      .where(eq(leads.agentId, agentId))
-      .orderBy(desc(leads.createdAt));
+    return Array.from(this.leads.values())
+      .filter(l => l.agentId === agentId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async getLeadsByCustomer(customerId: string): Promise<Lead[]> {
-    return await db.select().from(leads)
-      .where(eq(leads.customerId, customerId))
-      .orderBy(desc(leads.createdAt));
+    return Array.from(this.leads.values())
+      .filter(l => l.customerId === customerId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async updateLead(id: string, updates: Partial<Lead>): Promise<Lead> {
-    const [updated] = await db.update(leads)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(leads.id, id))
-      .returning();
+    const lead = this.leads.get(id);
+    if (!lead) throw new Error("Lead not found");
+    const updated = { ...lead, ...updates, updatedAt: new Date() };
+    this.leads.set(id, updated);
     return updated;
   }
 
-  // Conversation operations
   async createConversation(conversation: InsertConversation): Promise<Conversation> {
-    const [created] = await db.insert(conversations).values(conversation).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Conversation = {
+      id,
+      leadId: conversation.leadId,
+      customerId: conversation.customerId,
+      agentId: conversation.agentId,
+      lastMessageAt: now,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.conversations.set(id, created);
     return created;
   }
 
   async getConversation(id: string): Promise<Conversation | undefined> {
-    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
-    return conversation;
+    return this.conversations.get(id);
   }
 
   async getConversationsByUser(userId: string): Promise<Conversation[]> {
-    return await db.select().from(conversations)
-      .where(or(eq(conversations.customerId, userId), eq(conversations.agentId, userId)))
-      .orderBy(desc(conversations.lastMessageAt));
+    return Array.from(this.conversations.values())
+      .filter(c => c.customerId === userId || c.agentId === userId)
+      .sort((a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0));
   }
 
   async updateConversation(id: string, updates: Partial<Conversation>): Promise<Conversation> {
-    const [updated] = await db.update(conversations)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(conversations.id, id))
-      .returning();
+    const conversation = this.conversations.get(id);
+    if (!conversation) throw new Error("Conversation not found");
+    const updated = { ...conversation, ...updates, updatedAt: new Date() };
+    this.conversations.set(id, updated);
     return updated;
   }
 
-  // Message operations
   async createMessage(message: InsertMessage): Promise<Message> {
-    const [created] = await db.insert(messages).values(message).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Message = {
+      id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      content: message.content ?? null,
+      messageType: message.messageType ?? "text",
+      fileUrl: message.fileUrl ?? null,
+      metadata: message.metadata ?? null,
+      isRead: false,
+      createdAt: now,
+    };
+    this.messages.set(id, created);
     
-    // Update conversation's last message timestamp
-    await db.update(conversations)
-      .set({ lastMessageAt: new Date() })
-      .where(eq(conversations.id, message.conversationId));
+    const conversation = this.conversations.get(message.conversationId);
+    if (conversation) {
+      conversation.lastMessageAt = now;
+      this.conversations.set(message.conversationId, conversation);
+    }
     
     return created;
   }
 
   async getMessagesByConversation(conversationId: string): Promise<Message[]> {
-    return await db.select().from(messages)
-      .where(eq(messages.conversationId, conversationId))
-      .orderBy(asc(messages.createdAt));
+    return Array.from(this.messages.values())
+      .filter(m => m.conversationId === conversationId)
+      .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
   }
 
   async markMessageAsRead(id: string): Promise<Message> {
-    const [updated] = await db.update(messages)
-      .set({ isRead: true })
-      .where(eq(messages.id, id))
-      .returning();
-    return updated;
+    const message = this.messages.get(id);
+    if (!message) throw new Error("Message not found");
+    message.isRead = true;
+    this.messages.set(id, message);
+    return message;
   }
 
-  // Property operations
   async createProperty(property: InsertProperty): Promise<Property> {
-    const [created] = await db.insert(properties).values(property).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Property = {
+      id,
+      agentId: property.agentId,
+      title: property.title,
+      description: property.description ?? null,
+      propertyType: property.propertyType ?? null,
+      price: property.price ?? null,
+      area: property.area ?? null,
+      address: property.address ?? null,
+      features: property.features ?? null,
+      imageUrls: property.imageUrls ?? null,
+      isAvailable: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.properties.set(id, created);
     return created;
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
-    return property;
+    return this.properties.get(id);
   }
 
   async getPropertiesByAgent(agentId: string): Promise<Property[]> {
-    return await db.select().from(properties)
-      .where(and(eq(properties.agentId, agentId), eq(properties.isAvailable, true)))
-      .orderBy(desc(properties.createdAt));
+    return Array.from(this.properties.values())
+      .filter(p => p.agentId === agentId && p.isAvailable)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async searchProperties(filters: { 
@@ -345,70 +448,96 @@ export class DatabaseStorage implements IStorage {
     minPrice?: number, 
     maxPrice?: number 
   }): Promise<Property[]> {
-    // Simplified for testing - just return all available properties
-    return await db.select().from(properties)
-      .where(eq(properties.isAvailable, true))
-      .orderBy(asc(properties.price));
+    return Array.from(this.properties.values())
+      .filter(p => p.isAvailable)
+      .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
   }
 
   async updateProperty(id: string, updates: Partial<Property>): Promise<Property> {
-    const [updated] = await db.update(properties)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(properties.id, id))
-      .returning();
+    const property = this.properties.get(id);
+    if (!property) throw new Error("Property not found");
+    const updated = { ...property, ...updates, updatedAt: new Date() };
+    this.properties.set(id, updated);
     return updated;
   }
 
-  // Payment operations
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const [created] = await db.insert(payments).values(payment).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Payment = {
+      id,
+      userId: payment.userId,
+      amount: payment.amount,
+      currency: payment.currency ?? "JPY",
+      paymentType: payment.paymentType ?? null,
+      status: "pending",
+      stripePaymentIntentId: payment.stripePaymentIntentId ?? null,
+      metadata: payment.metadata ?? null,
+      createdAt: now,
+    };
+    this.payments.set(id, created);
     return created;
   }
 
   async getPayment(id: string): Promise<Payment | undefined> {
-    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
-    return payment;
+    return this.payments.get(id);
   }
 
   async getPaymentsByUser(userId: string): Promise<Payment[]> {
-    return await db.select().from(payments)
-      .where(eq(payments.userId, userId))
-      .orderBy(desc(payments.createdAt));
+    return Array.from(this.payments.values())
+      .filter(p => p.userId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
-    const [updated] = await db.update(payments)
-      .set(updates)
-      .where(eq(payments.id, id))
-      .returning();
+    const payment = this.payments.get(id);
+    if (!payment) throw new Error("Payment not found");
+    const updated = { ...payment, ...updates };
+    this.payments.set(id, updated);
     return updated;
   }
 
-  // Notification operations
   async createNotification(notification: InsertNotification): Promise<Notification> {
-    const [created] = await db.insert(notifications).values(notification).returning();
+    const id = nanoid();
+    const now = new Date();
+    const created: Notification = {
+      id,
+      userId: notification.userId,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type ?? null,
+      actionUrl: notification.actionUrl ?? null,
+      metadata: notification.metadata ?? null,
+      isRead: false,
+      createdAt: now,
+    };
+    this.notifications.set(id, created);
     return created;
   }
 
   async getNotificationsByUser(userId: string): Promise<Notification[]> {
-    return await db.select().from(notifications)
-      .where(eq(notifications.userId, userId))
-      .orderBy(desc(notifications.createdAt));
+    return Array.from(this.notifications.values())
+      .filter(n => n.userId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async markNotificationAsRead(id: string): Promise<Notification> {
-    const [updated] = await db.update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.id, id))
-      .returning();
-    return updated;
+    const notification = this.notifications.get(id);
+    if (!notification) throw new Error("Notification not found");
+    notification.isRead = true;
+    this.notifications.set(id, notification);
+    return notification;
   }
 
   async markAllNotificationsAsRead(userId: string): Promise<void> {
-    await db.update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.userId, userId));
+    const entries = Array.from(this.notifications.entries());
+    for (const [id, notification] of entries) {
+      if (notification.userId === userId) {
+        notification.isRead = true;
+        this.notifications.set(id, notification);
+      }
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
