@@ -53,10 +53,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.updateUserRole(userId, role);
+      await storage.updateUser(userId, { onboardingStatus: 'role_selection' });
       res.json({ success: true, role });
     } catch (error) {
       console.error("Error setting user role:", error);
       res.status(500).json({ message: "Failed to set role" });
+    }
+  });
+
+  // Update contact details endpoint
+  app.put('/api/auth/contact-details', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { 
+        firstName, 
+        middleName, 
+        lastName, 
+        email, 
+        phone, 
+        phoneCountryCode,
+        preferredContactMethod,
+        lineId,
+        whatsappNumber
+      } = req.body;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        phone,
+        phoneCountryCode,
+        preferredContactMethod,
+        lineId,
+        whatsappNumber,
+        onboardingStatus: 'contact_details'
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating contact details:", error);
+      res.status(500).json({ message: "Failed to update contact details" });
+    }
+  });
+
+  // Complete onboarding endpoint
+  app.post('/api/auth/complete-onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        onboardingStatus: 'completed',
+        onboardingCompletedAt: new Date()
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
     }
   });
 
@@ -160,6 +214,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agent routes
+  app.post('/api/agents/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profileData = insertAgentProfileSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const profile = await storage.createAgentProfile(profileData);
+      await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error creating agent profile:", error);
+      res.status(500).json({ message: "Failed to create agent profile" });
+    }
+  });
+
   app.post('/api/agent/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -169,9 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const profile = await storage.createAgentProfile(profileData);
-      
-      // Update user role
-      await storage.upsertUser({ id: userId, role: 'agent' });
+      await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
       
       res.json(profile);
     } catch (error) {
@@ -251,6 +321,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Referrer routes
+  app.post('/api/referrers/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profileData = insertReferrerProfileSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const profile = await storage.createReferrerProfile(profileData);
+      await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error creating referrer profile:", error);
+      res.status(500).json({ message: "Failed to create referrer profile" });
+    }
+  });
+
   app.post('/api/referrer/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -260,9 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const profile = await storage.createReferrerProfile(profileData);
-      
-      // Update user role
-      await storage.upsertUser({ id: userId, role: 'referrer' });
+      await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
       
       res.json(profile);
     } catch (error) {
@@ -454,7 +540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time messaging
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', (ws: WebSocket & { conversationId?: string }, req) => {
     console.log('New WebSocket connection');
 
     ws.on('message', async (data) => {

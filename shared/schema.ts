@@ -33,17 +33,26 @@ export const contactMethodEnum = pgEnum('contact_method', ['whatsapp', 'line', '
 export const messageTypeEnum = pgEnum('message_type', ['text', 'image', 'file', 'property_share']);
 export const leadStatusEnum = pgEnum('lead_status', ['pending', 'viewed', 'contacted', 'in_progress', 'closed']);
 
+// Onboarding status enum
+export const onboardingStatusEnum = pgEnum('onboarding_status', ['splash', 'role_selection', 'contact_details', 'role_specific', 'completed']);
+
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
+  middleName: varchar("middle_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  phoneCountryCode: varchar("phone_country_code").default('+81'),
   profileImageUrl: varchar("profile_image_url"),
   role: userRoleEnum("role").default('customer'),
-  phone: varchar("phone"),
   preferredContactMethod: contactMethodEnum("preferred_contact_method"),
+  lineId: varchar("line_id"),
+  whatsappNumber: varchar("whatsapp_number"),
   isVerified: boolean("is_verified").default(false),
+  onboardingStatus: onboardingStatusEnum("onboarding_status").default('splash'),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),

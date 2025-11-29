@@ -27,6 +27,7 @@ import { nanoid } from "nanoid";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(userId: string, updates: Partial<User>): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
   
   createCustomerRequest(request: InsertCustomerRequest): Promise<CustomerRequest>;
@@ -110,12 +111,18 @@ export class MemStorage implements IStorage {
       id: userData.id!,
       email: userData.email ?? existing?.email ?? null,
       firstName: userData.firstName ?? existing?.firstName ?? null,
+      middleName: userData.middleName ?? existing?.middleName ?? null,
       lastName: userData.lastName ?? existing?.lastName ?? null,
+      phone: userData.phone ?? existing?.phone ?? null,
+      phoneCountryCode: userData.phoneCountryCode ?? existing?.phoneCountryCode ?? '+81',
       profileImageUrl: userData.profileImageUrl ?? existing?.profileImageUrl ?? null,
       role: existing?.role ?? "customer",
-      phone: existing?.phone ?? null,
       preferredContactMethod: existing?.preferredContactMethod ?? null,
+      lineId: existing?.lineId ?? null,
+      whatsappNumber: existing?.whatsappNumber ?? null,
       isVerified: existing?.isVerified ?? false,
+      onboardingStatus: existing?.onboardingStatus ?? 'splash',
+      onboardingCompletedAt: existing?.onboardingCompletedAt ?? null,
       stripeCustomerId: existing?.stripeCustomerId ?? null,
       stripeSubscriptionId: existing?.stripeSubscriptionId ?? null,
       createdAt: existing?.createdAt ?? now,
@@ -123,6 +130,14 @@ export class MemStorage implements IStorage {
     };
     this.users.set(user.id, user);
     return user;
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    const updated = { ...user, ...updates, updatedAt: new Date() };
+    this.users.set(userId, updated);
+    return updated;
   }
 
   async updateUserRole(userId: string, role: string): Promise<User> {

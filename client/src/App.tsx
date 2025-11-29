@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Splash from "@/pages/splash";
+import Onboarding from "@/pages/onboarding";
 import RoleSelection from "@/pages/role-selection";
 import RoleSetup from "@/pages/role-setup";
 import Home from "@/pages/home";
@@ -55,20 +57,31 @@ function Router() {
 
   const userRole = user?.role;
   const effectiveRole = pendingRole || userRole;
+  const onboardingComplete = user?.onboardingStatus === 'completed';
   
   const needsProfileSetup = isAuthenticated && user && effectiveRole && 
     (effectiveRole === 'agent' || effectiveRole === 'referrer') && !user.profile;
+
+  const showBottomNav = isAuthenticated && onboardingComplete;
 
   return (
     <div className="max-w-sm mx-auto bg-white min-h-screen relative">
       <Switch>
         {!isAuthenticated ? (
           <>
-            <Route path="/" component={RoleSelection} />
+            <Route path="/" component={Splash} />
+            <Route path="/splash" component={Splash} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/role-selection" component={RoleSelection} />
             <Route path="/landing" component={Landing} />
           </>
-        ) : needsProfileSetup ? (
-          <Route path="*" component={RoleSetup} />
+        ) : !onboardingComplete ? (
+          <>
+            <Route path="/" component={Onboarding} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/role-setup" component={RoleSetup} />
+            <Route path="*" component={Onboarding} />
+          </>
         ) : (
           <>
             <Route path="/" component={Home} />
@@ -82,7 +95,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
       
-      {isAuthenticated && !needsProfileSetup && <BottomNavigation />}
+      {showBottomNav && <BottomNavigation />}
     </div>
   );
 }
