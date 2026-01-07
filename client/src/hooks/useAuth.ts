@@ -6,14 +6,19 @@ export interface AuthUser extends User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<AuthUser | null>({
+  const { data: user, isLoading, isError } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    staleTime: 5 * 60 * 1000, 
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return {
     user: user ?? null,
     isLoading,
+    isError,
     isAuthenticated: !!user,
   };
 }

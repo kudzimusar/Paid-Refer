@@ -219,6 +219,7 @@ export default function Onboarding() {
   const setupReferrerMutation = useMutation({
     mutationFn: async (data: ReferrerProfile) => {
       const payload = {
+        userId: user?.id,
         preferredRewardMethod: data.preferredRewardMethod,
         bankDetails: data.preferredRewardMethod === 'bank' ? {
           bankName: data.bankName,

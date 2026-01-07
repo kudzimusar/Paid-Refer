@@ -19,7 +19,8 @@ export default function Splash() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (user.onboardingStatus === 'completed') {
+      const onboardingComplete = user.onboardingStatus === 'completed';
+      if (onboardingComplete) {
         switch (user.role) {
           case 'customer':
             setLocation('/');
@@ -34,9 +35,11 @@ export default function Splash() {
             setLocation('/admin');
             break;
           default:
+            // If role is set but onboarding isn't complete
             setLocation('/onboarding');
         }
-      } else {
+      } else if (user.role && user.role !== 'customer') {
+        // Only redirect if a specific role is chosen and onboarding is pending
         setLocation('/onboarding');
       }
     }

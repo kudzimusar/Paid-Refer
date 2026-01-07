@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -21,9 +21,17 @@ import Chat from "@/pages/chat";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 
 function Router() {
+  const [location, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
   const [pendingRole, setPendingRole] = useState<string | null>(null);
   const [roleProcessing, setRoleProcessing] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setAuthChecked(true);
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (isAuthenticated && !roleProcessing) {
@@ -47,10 +55,31 @@ function Router() {
     }
   }, [isAuthenticated, roleProcessing]);
 
-  if (isLoading || roleProcessing) {
+  // If initial auth hasn't checked, show nothing or simple spinner
+  if (!authChecked || (isLoading && !isAuthenticated)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Redirect to splash if not authenticated and not on splash or onboarding
+  const isAuthRoute = location === '/splash' || location === '/onboarding' || location === '/role-selection' || location === '/landing';
+  
+  if (!isAuthenticated && !isAuthRoute && location !== '/') {
+    // Stop the 401 loop by only redirecting if we are not already at splash
+    if (location !== '/splash') {
+      window.history.replaceState(null, '', '/splash');
+      setLocation('/splash');
+    }
+    return null;
+  }
+
+  if (roleProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
   }
