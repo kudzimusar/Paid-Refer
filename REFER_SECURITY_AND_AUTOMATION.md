@@ -53,4 +53,20 @@ firebase deploy --only firestore:rules,firestore:indexes
 
 # Update environment variables
 # Ensure STRIPE_SECRET_KEY and INTERNAL_API_KEY are set in production
-```
+## 6. GitHub Pages Demo Mode
+The application includes a specialized "Demo Mode" for friction-free stakeholder review on GitHub Pages.
+
+- **Detection:** Automatically detects if `window.location.hostname` includes `github.io`.
+- **Behavior:** 
+  - Bypasses Firebase Authentication.
+  - Injects a `mockUser` object with `role: "customer"`.
+  - Redirects app routing and API base paths to the `/Paid-Refer/` subpath.
+- **Limitation:** Write operations (POST/PUT) will attempt to hit the backend but will fail without a CORS-enabled production server.
+
+## 7. Production Deployment Strategy
+For a full production rollout:
+
+1.  **Backend Hosting:** Use Google Cloud Run or Render to host the Node.js/Express server.
+2.  **Frontend:** Switch from GitHub Pages to a hosting provider that supports SPAs (e.g., Vercel, Firebase Hosting) to avoid base-path issues and support clean URLs.
+3.  **Cross-Origin:** Ensure the backend `cors` configuration allows the production frontend domain.
+4.  **Secrets:** Configure actual keys for USSD, Stripe, and Gemini in the production environment.
