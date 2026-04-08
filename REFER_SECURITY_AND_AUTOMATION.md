@@ -70,3 +70,26 @@ For a full production rollout:
 2.  **Frontend:** Switch from GitHub Pages to a hosting provider that supports SPAs (e.g., Vercel, Firebase Hosting) to avoid base-path issues and support clean URLs.
 3.  **Cross-Origin:** Ensure the backend `cors` configuration allows the production frontend domain.
 4.  **Secrets:** Configure actual keys for USSD, Stripe, and Gemini in the production environment.
+
+## 8. Responsible API Areas
+To ensure full system functionality, the following API integrations must be configured in the production environment. Refer to `.env.example` for the complete list of variables.
+
+### Core Infrastructure
+| Area | Service | Var Requirements | Responsibility |
+|------|---------|------------------|----------------|
+| **Auth/Admin** | Firebase | `FIREBASE_*`, `GOOGLE_*` | Identity, Storage, & RLS |
+| **Database** | Supabase/Neon | `DATABASE_URL` | Persistent Storage (Postgres) |
+| **Payments** | Stripe | `STRIPE_*` | Multi-country Payouts & Subscriptions |
+
+### Intelligence & Automation
+| Area | Service | Var Requirements | Responsibility |
+|------|---------|------------------|----------------|
+| **AI Extraction** | Gemini | `GEMINI_API_KEY` | License/Photo analysis |
+| **AI Reasoning** | OpenAI | `OPENAI_API_KEY` | Lead matching & content generation |
+| **Workflows** | n8n | `N8N_*`, `INTERNAL_*` | Lead redistribution, notifications, RLHF |
+
+### Entry Points
+| Area | Service | Var Requirements | Responsibility |
+|------|---------|------------------|----------------|
+| **USSD/SMS** | Africa's Talking | `AT_*` | Multi-country mobile entry (ZW focus) |
+| **Base URL** | App Host | `APP_BASE_URL` | Redirect orchestration |

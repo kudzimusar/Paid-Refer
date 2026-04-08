@@ -67,7 +67,12 @@
 }
 
 .premium-card {
-  @apply rounded-[--radius] border border-white/20 bg-white/10 shadow-premium backdrop-blur-md;
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  box-shadow: var(--shadow-premium);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .gradient-text {
