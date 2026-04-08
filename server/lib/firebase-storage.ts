@@ -103,3 +103,29 @@ export async function uploadReceiptPDF(
 
   return signedUrl;
 }
+
+// Generic file upload helper
+export async function uploadToFirebase(
+  fileBuffer: Buffer,
+  storagePath: string,
+  mimeType: string
+): Promise<string> {
+  const bucket = storage.bucket();
+  const file = bucket.file(storagePath);
+
+  await file.save(fileBuffer, {
+    metadata: {
+      contentType: mimeType,
+    },
+  });
+
+  // For verification docs, we usually want signed URLs or make them public if the workflow allows
+  // Given the route expects a publicUrl for analyzeDocument (which might be an external service or cloud function)
+  // we'll make it public for now or return a signed URL. 
+  // Gemini analyzeDocument in gemini-document.ts takes a publicUrl string? 
+  // Wait, gemini-document.ts:extractDocumentData takes a Buffer.
+  // But routes.ts calls analyzeDocument(publicUrl, country).
+  
+  await file.makePublic();
+  return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+}

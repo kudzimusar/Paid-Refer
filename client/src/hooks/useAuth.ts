@@ -28,6 +28,13 @@ export function useAuth() {
 
   const isDemo = window.location.hostname.includes("github.io") || window.location.search.includes("demo=true");
 
+  function resolveUrl(url: string) {
+    if (isDemo && url.startsWith("/")) {
+      return `/Paid-Refer${url}`;
+    }
+    return url;
+  }
+
   const { data: user, isLoading, isError } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
@@ -50,7 +57,7 @@ export function useAuth() {
       if (!token) return null;
       
       try {
-        const res = await fetch("/api/auth/user", {
+        const res = await fetch(resolveUrl("/api/auth/user"), {
           headers: {
             Authorization: `Bearer ${token}`
           }

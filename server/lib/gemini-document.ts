@@ -185,3 +185,53 @@ export async function extractDocumentData(
     rawExtracted: {},
   };
 }
+
+/**
+ * High-level wrapper for document analysis used in routes.
+ * Handles fetching the document if a URL is provided.
+ */
+export async function analyzeDocument(
+  documentUrl: string,
+  country: "ZW" | "ZA" | "JP"
+): Promise<{ isVerified: boolean; licenseNumber: string | null; confidence: number; reason: string }> {
+  try {
+    // Fetch the document content
+    const response = await fetch(documentUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document from ${documentUrl}`);
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    
+    // Determine mime type from URL or response headers
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const mimeType = (contentType.includes("pdf") ? "application/pdf" : "image/jpeg") as any;
+
+    const result = await extractDocumentData(buffer, mimeType, country);
+
+    const isVerified = result.confidenceScore > 0.7 && !result.isExpired && !!result.licenseNumber;
+    
+    let reason = "Verification successful";
+    if (result.isExpired) reason = "License has expired";
+    else if (!result.licenseNumber) reason = "Could not find a valid license number";
+    else if (result.confidenceScore <= 0.7) reason = "Document quality too low for certain verification";
+    
+    if (result.issues.length > 0) {
+      reason += `. Issues found: ${result.issues.join(", ")}`;
+    }
+
+    return {
+      isVerified,
+      licenseNumber: result.licenseNumber,
+      confidence: result.confidenceScore,
+      reason
+    };
+  } catch (error: any) {
+    console.error("analyzeDocument error:", error);
+    return {
+      isVerified: false,
+      licenseNumber: null,
+      confidence: 0,
+      reason: `System error during analysis: ${error.message}`
+    };
+  }
+}

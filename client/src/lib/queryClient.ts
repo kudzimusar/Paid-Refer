@@ -7,6 +7,14 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function resolveUrl(url: string) {
+  const isGitHubPages = window.location.hostname.includes("github.io");
+  if (isGitHubPages && url.startsWith("/")) {
+    return `/Paid-Refer${url}`;
+  }
+  return url;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -18,7 +26,7 @@ export async function apiRequest(
   if (data) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, {
+  const res = await fetch(resolveUrl(url), {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -39,7 +47,8 @@ export const getQueryFn: <T>(options: {
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = resolveUrl(queryKey.join("/") as string);
+    const res = await fetch(url, {
       headers,
       credentials: "include",
     });

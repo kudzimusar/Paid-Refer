@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,9 +19,10 @@ import AgentDashboard from "@/pages/agent-dashboard";
 import ReferrerDashboard from "@/pages/referrer-dashboard";
 import Chat from "@/pages/chat";
 import AuthPage from "@/pages/auth";
+import VerifyAgent from "@/pages/verify-agent";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 
-function Router() {
+function AppContent() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuth();
   const [pendingRole, setPendingRole] = useState<string | null>(null);
@@ -71,7 +72,6 @@ function Router() {
   if (!isAuthenticated && !isAuthRoute && location !== '/') {
     // Stop the 401 loop by only redirecting if we are not already at splash
     if (location !== '/splash') {
-      window.history.replaceState(null, '', '/splash');
       setLocation('/splash');
     }
     return null;
@@ -95,7 +95,7 @@ function Router() {
   const showBottomNav = isAuthenticated && onboardingComplete;
 
   return (
-    <div className="max-w-sm mx-auto bg-white min-h-screen relative">
+    <div className="max-w-sm mx-auto bg-white min-h-screen relative shadow-2xl overflow-hidden rounded-3xl m-4">
       <Switch>
         {!isAuthenticated ? (
           <>
@@ -119,6 +119,7 @@ function Router() {
             <Route path="/customer-form" component={CustomerForm} />
             <Route path="/customer-dashboard" component={CustomerDashboard} />
             <Route path="/agent-dashboard" component={AgentDashboard} />
+            <Route path="/agent/verify" component={VerifyAgent} />
             <Route path="/referrer-dashboard" component={ReferrerDashboard} />
             <Route path="/chat/:conversationId?" component={Chat} />
           </>
@@ -132,12 +133,16 @@ function Router() {
 }
 
 function App() {
+  const base = window.location.hostname.includes("github.io") ? "/Paid-Refer" : "";
+  
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <WouterRouter base={base}>
+        <TooltipProvider>
+          <Toaster />
+          <AppContent />
+        </TooltipProvider>
+      </WouterRouter>
     </QueryClientProvider>
   );
 }

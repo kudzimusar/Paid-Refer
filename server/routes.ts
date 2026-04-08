@@ -39,9 +39,22 @@ import {
   menuCheckEarnings,
   menuSupport
 } from "./lib/ussd-flows.ts";
+import { 
+  triggerAgentVerification, 
+  triggerLeadMatching,
+  triggerPhotoAnalysis,
+  triggerCommissionPayout
+} from "./lib/n8n-triggers.ts";
 import Stripe from "stripe";
-
-// Configure multer for file uploads
+import { uploadToFirebase } from "./lib/firebase-storage.ts";
+import { analyzeDocument } from "./lib/gemini-document.ts";
+import { dbStorage } from "./db-storage.ts";
+import { and } from "drizzle-orm";
+import { db } from "./db.ts";
+import { leads } from "@shared/schema.ts";
+import { type NextFunction, type Request, type Response } from "express";
+import { analyzePropertyPhoto } from "./lib/gemini-photos.ts";
+import { uploadPropertyPhoto } from "./lib/firebase-storage.ts";
 const upload = multer({
   dest: 'uploads/',
   limits: {
@@ -139,6 +152,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const inputs = text.split("*");
     const menuLevel = inputs[0];
+
+    // Log USSD event for n8n/Automation intelligence
+    await storage.logWorkflow({
+      workflowId: 'ussd_session',
+      status: 'active',
+      payload: { sessionId, phoneNumber, text },
+      timestamp: new Date()
+    });
 
     // Load or create session
     const sessionKey = `ussd:${sessionId}`;
@@ -462,41 +483,14 @@ Empowering local agents & referrers.
       
       const request = await storage.createCustomerRequest(requestData);
       
-      // TESTING MODE: Skip AI features to avoid quota issues
-      console.log("Request created successfully:", request.id);
       
-      // Simple agent matching without AI (for testing)
-      const allAgents = await storage.getAgentProfiles({});
-      
-      console.log("Found agents:", allAgents.length);
-      
-      // Create simple leads for testing (first 3 agents)
-      const leads = [];
-      for (const agent of allAgents.slice(0, 3)) {
-        const lead = await storage.createLead({
-          customerId: userId,
-          agentId: agent.userId,
-          requestId: request.id,
-          matchScore: "0.8", // Fixed score for testing
-          aiSummary: 'Testing mode - agent matched based on availability'
-        });
-        leads.push(lead);
-        
-        // Create notification for agent
-        await storage.createNotification({
-          userId: agent.userId,
-          title: 'New Lead Match',
-          message: `New customer request: ${requestData.propertyType || 'Property'} in ${requestData.preferredAreas?.join(', ') || 'Tokyo'}`,
-          type: 'new_lead',
-          metadata: { leadId: lead.id, requestId: request.id }
-        });
-      }
+      // TRIGGER AI MATCHING (Refer 2.0 Automation)
+      await triggerLeadMatching(request.id);
       
       res.json({ 
         success: true, 
         request,
-        leads: leads.length,
-        testingMode: true
+        message: "Matching process initiated. You will receive notifications as agents are matched."
       });
     } catch (error) {
       console.error("Error creating customer request:", error);
@@ -669,6 +663,62 @@ Empowering local agents & referrers.
     } catch (error) {
       console.error("Error creating property:", error);
       res.status(500).json({ message: "Failed to create property" });
+    }
+  });
+
+  app.post('/api/properties/:id/photos', isFirebaseAuthenticated, upload.array('photos', 5), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const files = req.files as any[];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No photos uploaded" });
+      }
+
+      const uploadResults = [];
+      const analysisResults = [];
+
+      for (const file of files) {
+        const fileBuffer = await fs.promises.readFile(file.path);
+        
+        // 1. Initial AI Screening
+        const analysis = await analyzePropertyPhoto(fileBuffer);
+        analysisResults.push(analysis);
+
+        if (analysis.shouldReject) {
+            // Cleanup temp file
+            await fs.promises.unlink(file.path);
+            return res.status(400).json({ 
+                message: `Photo rejected: ${analysis.rejectionReason}`,
+                advice: analysis.agentAdvice 
+            });
+        }
+
+        // 2. Upload to Firebase
+        const result = await uploadPropertyPhoto(fileBuffer, id, userId);
+        uploadResults.push(result.url);
+
+        // Cleanup temp file
+        await fs.promises.unlink(file.path);
+      }
+
+      // 3. Update Property with photo URLs
+      const property = await storage.getProperty(id);
+      if (property) {
+        const currentUrls = property.imageUrls ? (JSON.parse(property.imageUrls as string) as string[]) : [];
+        await storage.updateProperty(id, { 
+            imageUrls: JSON.stringify([...currentUrls, ...uploadResults]) 
+        });
+      }
+
+      // 4. Trigger n8n for background enrichment
+      await triggerPhotoAnalysis(id, uploadResults);
+
+      res.json({ urls: uploadResults, analysis: analysisResults });
+    } catch (error) {
+      console.error("Property photo upload error:", error);
+      res.status(500).json({ message: "Failed to upload property photos" });
     }
   });
 
@@ -895,6 +945,66 @@ Empowering local agents & referrers.
     } catch (error) {
       console.error("Error tracking referral:", error);
       res.status(500).json({ message: "Failed to track referral" });
+    }
+  });
+
+  /**
+   * Agent Identity Verification (AI-Driven)
+   * Analyzes uploaded documents using Gemini 1.5 Pro
+   */
+  app.post('/api/agent/verify-license', isFirebaseAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No license document uploaded" });
+      }
+
+      const userId = req.user.uid;
+      const country = req.body.country || 'ZW';
+      
+      // Read file from disk
+      const fileBuffer = await fs.promises.readFile(req.file.path);
+      
+      // 1. Upload to Firebase Storage
+      const storagePath = `verification/${userId}/${Date.now()}_${req.file.originalname}`;
+      const publicUrl = await uploadToFirebase(fileBuffer, storagePath, req.file.mimetype);
+
+      // Clean up local file early
+      await fs.promises.unlink(req.file.path);
+
+      // 2. Perform AI verification with Gemini 1.5 Pro
+      const analysisResult = await analyzeDocument(publicUrl, country as any);
+      
+      // 3. Update DB Profile
+      await dbStorage.updateAgentProfile(userId, {
+        isVerified: analysisResult.isVerified,
+        licenseNumber: analysisResult.licenseNumber,
+        updatedAt: new Date()
+      });
+
+      // 4. Log to internal automation workflow
+      await dbStorage.logWorkflow({
+        workflowId: 'agent_verification',
+        status: analysisResult.isVerified ? 'verified' : 'rejected',
+        payload: { 
+          userId, 
+          country,
+          licenseNumber: analysisResult.licenseNumber,
+          confidence: analysisResult.confidence 
+        },
+        timestamp: new Date()
+      });
+
+      // 5. Trigger n8n for secondary actions (e.g. Email confirmation, CRM sync)
+      await triggerAgentVerification(userId, publicUrl, country);
+
+      res.json({
+        matched: analysisResult.isVerified,
+        licenseNumber: analysisResult.licenseNumber,
+        reason: analysisResult.reason
+      });
+    } catch (error: any) {
+      console.error("Verification endpoint error:", error);
+      res.status(500).json({ message: error.message || "License verification failed" });
     }
   });
 
