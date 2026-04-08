@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Building2, Users, Handshake, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { PremiumCard, PremiumBadge } from "@/components/ui/premium-card";
 
 export default function Splash() {
   const [, setLocation] = useLocation();
@@ -59,8 +60,19 @@ export default function Splash() {
         className="flex-1 flex flex-col items-center justify-center px-6 py-12"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.8 }}
       >
+        {window.location.hostname.includes("github.io") && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <PremiumBadge className="bg-white/20 text-white border-white/30 backdrop-blur-md">
+              Demo Environment
+            </PremiumBadge>
+          </motion.div>
+        )}
         <motion.div
           className="relative mb-8"
           initial={{ scale: 0, rotate: -180 }}
@@ -113,33 +125,23 @@ export default function Splash() {
             transition={{ delay: 0.2, duration: 0.5 }}
           >
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <motion.div
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Users className="w-8 h-8 text-white mx-auto mb-2" />
-                <span className="text-white/90 text-sm">Verified Agents</span>
-              </motion.div>
-              <motion.div
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                <Building2 className="w-8 h-8 text-white mx-auto mb-2" />
-                <span className="text-white/90 text-sm">Tokyo Properties</span>
-              </motion.div>
-              <motion.div
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Handshake className="w-8 h-8 text-white mx-auto mb-2" />
-                <span className="text-white/90 text-sm">Easy Referrals</span>
-              </motion.div>
+              {[
+                { icon: Users, label: "Verified Agents", delay: 0.3 },
+                { icon: Building2, label: "Tokyo Homes", delay: 0.4 },
+                { icon: Handshake, label: "Easy Refer", delay: 0.5 }
+              ].map((item, i) => (
+                <PremiumCard
+                  key={i}
+                  className="bg-white/10 backdrop-blur-md border-white/20 p-3 text-center"
+                  hover={true}
+                  delay={item.delay}
+                >
+                  <item.icon className="w-6 h-6 text-white mx-auto mb-2" />
+                  <span className="text-white/90 text-[10px] font-medium leading-tight block">
+                    {item.label}
+                  </span>
+                </PremiumCard>
+              ))}
             </div>
 
             <Button

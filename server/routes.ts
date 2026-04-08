@@ -12,6 +12,8 @@ import {
   generateMarketInsights 
 } from "./openai";
 import { setUserClaims } from "./firebaseAuth";
+import { verifyIdentityDocument, verifySelfieMatch } from "./lib/ai-verification";
+import fs from "fs";
 import { requireFeature } from "./middleware/subscriptionGuard";
 import { 
   insertCustomerRequestSchema,
@@ -579,6 +581,11 @@ Empowering local agents & referrers.
       
       const lead = await storage.updateLead(leadId, updates);
       
+      // AI MATCH QUALITY FEEDBACK (Optional n8n trigger)
+      if (updates.status === 'contacted') {
+        // Here we could trigger n8n to log this successful match for RLHF
+      }
+      
       // If lead is accepted, create conversation
       if (updates.status === 'contacted') {
         const conversation = await storage.createConversation({
@@ -601,6 +608,51 @@ Empowering local agents & referrers.
     } catch (error) {
       console.error("Error updating lead:", error);
       res.status(500).json({ message: "Failed to update lead" });
+    }
+  });
+
+  /**
+   * Agent Identity Verification (AI-Driven)
+   * Analyzes uploaded documents using Gemini 1.5 Pro
+   */
+  app.post('/api/agent/verify-document', isFirebaseAuthenticated, upload.single('document'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No document uploaded" });
+      }
+
+      const userId = req.user.id;
+      const fileBuffer = await fs.promises.readFile(req.file.path);
+      
+      // Perform AI verification
+      const result = await verifyIdentityDocument(userId, fileBuffer, req.file.mimetype);
+      
+      if (result.isAuthentic && result.confidence > 0.8) {
+        await storage.updateUser(userId, {
+          isVerified: true,
+          onboardingStatus: 'completed'
+        });
+
+        // Log to internal intelligence system
+        await storage.logWorkflow({
+          workflowId: 'agent_verification_success',
+          status: 'verified',
+          payload: { 
+            userId, 
+            docType: result.extractedData.documentType,
+            confidence: result.confidence 
+          },
+          timestamp: new Date()
+        });
+      }
+
+      // Cleanup local file
+      await fs.promises.unlink(req.file.path);
+
+      res.json(result);
+    } catch (error) {
+      console.error("Verification endpoint error:", error);
+      res.status(500).json({ message: "Identity verification failed" });
     }
   });
 

@@ -81,13 +81,11 @@ export function hasRole(roles: string[]) {
  */
 export async function setUserClaims(
   firebaseUid: string,
-  userId: number,
-  role: string,
-  country: string
+  claims: { userId: string; role: string; country: string }
 ): Promise<void> {
   await auth.setCustomUserClaims(firebaseUid, {
-    userId: userId.toString(), // string because Firestore rules compare as string
-    role,    // "agent" | "customer" | "referrer" | "admin"
-    country, // "ZW" | "ZA" | "JP"
+    userId: claims.userId, 
+    role: claims.role,     
+    country: claims.country,
   });
 }

@@ -110,6 +110,26 @@ export default function AgentDashboard() {
           />
         </div>
 
+        {/* Verification Warning */}
+        {user?.role === 'agent' && !user?.isVerified && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Shield className="w-5 h-5 text-amber-600" />
+                <div>
+                  <h4 className="font-semibold text-amber-900">Verification Required</h4>
+                  <p className="text-sm text-amber-700">Complete identity verification to receive high-priority leads.</p>
+                </div>
+              </div>
+              <Link href="/dashboard/verify">
+                <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100">
+                  Verify Now
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {/* New Leads Alert */}
         {newLeads.length > 0 && (
           <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-l-4 border-primary">
