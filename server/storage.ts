@@ -26,7 +26,9 @@ import { nanoid } from "nanoid";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
+  createUser(user: any): Promise<User>;
+  upsertUser(user: any): Promise<User>;
   updateUser(userId: string, updates: Partial<User>): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
   
@@ -85,6 +87,13 @@ export interface IStorage {
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
+
+  // Refer 2.0 - Automation & Intelligence
+  logWorkflow(log: any): Promise<void>;
+  updateLeadIntelligence(intel: any): Promise<void>;
+  updateAgentScore(score: any): Promise<void>;
+  createVerification(verification: any): Promise<void>;
+  logCommunication(log: any): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -553,6 +562,24 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Refer 2.0 - Automation & Intelligence (Dummy implementations for MemStorage)
+  async logWorkflow(log: any): Promise<void> {
+    console.log("Automation Log:", log);
+  }
+  async updateLeadIntelligence(intel: any): Promise<void> {
+    console.log("Lead Intelligence Update:", intel);
+  }
+  async updateAgentScore(score: any): Promise<void> {
+    console.log("Agent Score Update:", score);
+  }
+  async createVerification(verification: any): Promise<void> {
+    console.log("Agent Verification Created:", verification);
+  }
+  async logCommunication(log: any): Promise<void> {
+    console.log("Communication Logged:", log);
+  }
 }
 
-export const storage = new MemStorage();
+import { dbStorage } from "./db-storage.ts";
+export const storage = dbStorage;

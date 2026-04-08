@@ -58,7 +58,7 @@ export default function RoleSelection() {
     // Store selected role in localStorage for after login
     localStorage.setItem('selectedRole', role);
     // Redirect to login
-    window.location.href = '/api/login';
+    setLocation('/auth');
   };
 
   return (
@@ -109,7 +109,7 @@ export default function RoleSelection() {
         {/* Additional Info */}
         <div className="text-center">
           <p className="text-sm text-gray-500 mb-4">
-            Already have an account? <a href="/api/login" className="text-primary hover:underline">Sign in here</a>
+            Already have an account? <button onClick={() => setLocation('/auth')} className="text-primary hover:underline">Sign in here</button>
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Badge variant="secondary">AI-Powered Matching</Badge>

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupFirebaseAuth, isFirebaseAuthenticated } from "./firebaseAuth";
 import { 
   generateAgentMatching, 
   qualifyLead, 
@@ -11,6 +11,8 @@ import {
   generateReferralContent,
   generateMarketInsights 
 } from "./openai";
+import { setUserClaims } from "./firebaseAuth";
+import { requireFeature } from "./middleware/subscriptionGuard";
 import { 
   insertCustomerRequestSchema,
   insertAgentProfileSchema,
@@ -21,6 +23,21 @@ import {
   insertPaymentSchema,
   insertNotificationSchema 
 } from "@shared/schema";
+import { 
+  getUSSDSession, 
+  saveUSSDSession, 
+  deleteUSSDSession 
+} from "./lib/ussd-session.ts";
+import { 
+  handleFindAgentFlow, 
+  handleAgentRegisterFlow, 
+  handleReferrerFlow,
+  menuAgentRegister_Step1,
+  menuFindAgent_Step1,
+  menuCheckEarnings,
+  menuSupport
+} from "./lib/ussd-flows.ts";
+import Stripe from "stripe";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -39,11 +56,238 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // --- AUTHENTICATION SETUP ---
+  // Migrate from legacy Replit Auth to Refer 2.0 Firebase Auth
+  await setupFirebaseAuth(app);
+
+  // --- REFER 2.0 INTERNAL AUTOMATION ROUTES ---
+  // Protection middleware for internal n8n/GCP webhooks
+  const verifyInternalSecret = (req: any, res: any, next: any) => {
+    const secret = req.headers['x-refer-internal-secret'];
+    if (secret !== process.env.INTERNAL_WEBHOOK_SECRET) {
+      return res.status(401).json({ message: "Unauthorized automation attempt" });
+    }
+    next();
+  };
+
+  /**
+   * n8n Webhook Receiver
+   * Processes events from n8n automation flows (In-app triggers)
+   */
+  app.post('/internal/webhooks/automation-callback', verifyInternalSecret, async (req, res) => {
+    try {
+      const { workflowId, status, payload } = req.body;
+      
+      await storage.logWorkflow({
+        workflowId,
+        status,
+        payload,
+        timestamp: new Date()
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Automation callback error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  /**
+   * Lead Event Processor
+   * Triggered by GCP Cloud Functions or n8n for lead intelligence updates
+   */
+  app.post('/internal/webhooks/lead-intelligence', verifyInternalSecret, async (req, res) => {
+    try {
+      const { leadId, score, analysis, classification } = req.body;
+      
+      await storage.updateLeadIntelligence({
+        leadId,
+        score,
+        analysis,
+        classification
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Lead intelligence update error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  /**
+   * System Health for Monitoring
+   */
+  app.get('/internal/api/system-health', verifyInternalSecret, async (req, res) => {
+    res.json({
+      status: 'operational',
+      timestamp: new Date().toISOString(),
+      version: '2.0.0-beta',
+      region: process.env.GOOGLE_CLOUD_REGION || 'local'
+    });
+  });
+  // --- END REFER 2.0 ROUTES ---
+
+  /**
+   * Africa's Talking USSD Callback
+   * Multi-country USSD entry point (ZW focus)
+   */
+  app.post('/public/ussd/callback', async (req, res) => {
+    const { sessionId, serviceCode, phoneNumber, text } = req.body;
+    let response = "";
+
+    const inputs = text.split("*");
+    const menuLevel = inputs[0];
+
+    // Load or create session
+    const sessionKey = `ussd:${sessionId}`;
+    let session = await getUSSDSession(sessionKey);
+    if (!session) {
+      session = { phoneNumber, steps: {}, startedAt: new Date().toISOString() };
+      await saveUSSDSession(sessionKey, session);
+    }
+
+    // MAIN MENU
+    if (text === "") {
+        response = `CON Welcome to Refer Property
+Empowering local agents & referrers.
+
+1. Find an Agent (Buy/Rent)
+2. Agent Registration (ZREB)
+3. Refer & Earn $15
+4. Check My Earnings
+5. Support`;
+    } 
+    else if (menuLevel === "1") {
+        response = await handleFindAgentFlow(inputs, phoneNumber, sessionKey, session);
+    }
+    else if (menuLevel === "2") {
+        response = await handleAgentRegisterFlow(inputs, phoneNumber);
+    }
+    else if (menuLevel === "3") {
+        response = await handleReferrerFlow(inputs, phoneNumber);
+    }
+    else if (menuLevel === "4") {
+        response = await menuCheckEarnings(phoneNumber);
+    }
+    else if (menuLevel === "5") {
+        response = menuSupport();
+    }
+    else {
+        response = "END Invalid option. Please try again.";
+    }
+
+    res.set("Content-Type", "text/plain");
+    res.send(response);
+  });
+
+  /**
+   * Stripe Webhook Handler
+   */
+  app.post('/public/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' as any });
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    } catch (err: any) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as any;
+        // Handle successful payment
+        break;
+      case 'customer.subscription.deleted':
+        // Handle subscription cancellation
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({ received: true });
+  });
+
+  // --- STRIPE CONNECT ROUTES ---
+  app.get("/api/payments/connect/status", isFirebaseAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+      
+      if (!profile?.stripeAccountId) {
+        return res.json({ connected: false });
+      }
+
+      const account = await stripe.accounts.retrieve(profile.stripeAccountId);
+      
+      res.json({
+        connected: true,
+        isComplete: account.details_submitted,
+        canReceivePayouts: account.payouts_enabled,
+        disabledReason: account.requirements?.disabled_reason,
+        requirements: account.requirements?.currently_due
+      });
+    } catch (error) {
+      console.error("Error fetching Stripe Connect status:", error);
+      res.status(500).json({ message: "Failed to fetch status" });
+    }
+  });
+
+  app.post("/api/payments/connect/start", isFirebaseAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+      
+      let stripeAccountId = profile?.stripeAccountId;
+
+      if (!stripeAccountId) {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: profile?.country || 'ZW',
+          capabilities: {
+            transfers: { requested: true },
+          },
+        });
+        stripeAccountId = account.id;
+        await db.update(userProfiles).set({ stripeAccountId }).where(eq(userProfiles.userId, userId));
+      }
+
+      const accountLink = await stripe.accountLinks.create({
+        account: stripeAccountId,
+        refresh_url: `${process.env.APP_BASE_URL}/dashboard/settings/payments?stripe_return=false`,
+        return_url: `${process.env.APP_BASE_URL}/dashboard/settings/payments?stripe_return=true`,
+        type: 'account_onboarding',
+      });
+
+      res.json({ onboardingUrl: accountLink.url });
+    } catch (error) {
+      console.error("Error starting Stripe onboarding:", error);
+      res.status(500).json({ message: "Failed to start onboarding" });
+    }
+  });
+
+  app.get("/api/payments/connect/dashboard-link", isFirebaseAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+
+      if (!profile?.stripeAccountId) {
+        return res.status(400).json({ error: "No Stripe account connected" });
+      }
+
+      const loginLink = await stripe.accounts.createLoginLink(profile.stripeAccountId);
+      res.json({ url: loginLink.url });
+    } catch (error) {
+      console.error("Error creating dashboard link:", error);
+      res.status(500).json({ message: "Failed to create dashboard link" });
+    }
+  });
+
 
   // Role assignment endpoint
-  app.post('/api/auth/set-role', isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/set-role', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { role } = req.body;
@@ -53,16 +297,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.updateUserRole(userId, role);
-      await storage.updateUser(userId, { onboardingStatus: 'role_selection' });
-      res.json({ success: true, role });
+      const updatedUser = await storage.updateUser(userId, { onboardingStatus: 'role_selection' });
+      
+      // Sync claims to Firebase
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+      await setUserClaims(req.user.uid, {
+        userId,
+        role,
+        country: profile?.country || 'JP' // Fallback
+      });
+
+      res.json({ success: true, user: updatedUser });
     } catch (error) {
-      console.error("Error setting user role:", error);
-      res.status(500).json({ message: "Failed to set role" });
+      console.error('Error setting role:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // --- INTERNAL AUTOMATION ROUTES (For n8n) ---
+  const checkInternalAuth = (req: Request, res: Response, next: NextFunction) => {
+    const key = req.headers['x-internal-api-key'];
+    if (key !== process.env.INTERNAL_API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    next();
+  };
+
+  app.post("/internal/api/update-subscription", checkInternalAuth, async (req, res) => {
+    const { userId, status, stripeSubscriptionId } = req.body;
+    try {
+      await storage.updateUser(userId, { 
+        subscriptionStatus: status,
+        stripeSubscriptionId 
+      });
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "DB Error" });
+    }
+  });
+
+  app.post("/internal/api/soft-lock-agent", checkInternalAuth, async (req, res) => {
+    const { agentId } = req.body;
+    try {
+      await storage.updateUser(agentId, { subscriptionStatus: "payment_grace" });
+      // Notify them
+      await storage.createNotification({
+        userId: agentId,
+        title: "Payment Overdue",
+        message: "Your subscription payment failed. Please update your details to keep receiving new leads.",
+        type: "billing",
+      });
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Action failed" });
+    }
+  });
+
+  app.post("/internal/api/redistribute-leads", checkInternalAuth, async (req, res) => {
+    const { agentId } = req.body;
+    try {
+      const activeLeads = await db.select().from(leads).where(
+        and(eq(leads.agentId, agentId), eq(leads.status, "pending"))
+      );
+      
+      for (const lead of activeLeads) {
+        // Simple redistribution strategy: Mark as unassigned or find next best match
+        await storage.updateLead(lead.id, { agentId: null, status: "pending" });
+        // Trigger re-matching logic (this would ideally trigger another n8n webhook)
+      }
+      
+      res.json({ success: true, count: activeLeads.length });
+    } catch (e) {
+      res.status(500).json({ error: "Redistribution failed" });
     }
   });
 
   // Update contact details endpoint
-  app.put('/api/auth/contact-details', isAuthenticated, async (req: any, res) => {
+  app.put('/api/auth/contact-details', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { 
@@ -98,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete onboarding endpoint
-  app.post('/api/auth/complete-onboarding', isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/complete-onboarding', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
@@ -115,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -139,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer routes
-  app.post('/api/customer/request', isAuthenticated, async (req: any, res) => {
+  app.post('/api/customer/request', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const requestData = insertCustomerRequestSchema.parse({
@@ -191,7 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/customer/requests', isAuthenticated, async (req: any, res) => {
+  app.get('/api/customer/requests', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const requests = await storage.getCustomerRequestsByUser(userId);
@@ -202,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/customer/leads', isAuthenticated, async (req: any, res) => {
+  app.get('/api/customer/leads', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const leads = await storage.getLeadsByCustomer(userId);
@@ -214,7 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agent routes
-  app.post('/api/agents/profile', isAuthenticated, async (req: any, res) => {
+  app.post('/api/agents/profile', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const profileData = insertAgentProfileSchema.parse({
@@ -232,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/agent/profile', isAuthenticated, async (req: any, res) => {
+  app.post('/api/agent/profile', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const profileData = insertAgentProfileSchema.parse({
@@ -250,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/agent/leads', isAuthenticated, async (req: any, res) => {
+  app.get('/api/agent/leads', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const leads = await storage.getLeadsByAgent(userId);
@@ -261,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/agent/lead/:leadId', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/agent/lead/:leadId', isFirebaseAuthenticated, requireFeature('accept_leads'), async (req: any, res) => {
     try {
       const { leadId } = req.params;
       const updates = req.body;
@@ -293,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/agent/property', isAuthenticated, async (req: any, res) => {
+  app.post('/api/agent/property', isFirebaseAuthenticated, requireFeature('manage_listings'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const propertyData = insertPropertySchema.parse({
@@ -309,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/agent/properties', isAuthenticated, async (req: any, res) => {
+  app.get('/api/agent/properties', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const properties = await storage.getPropertiesByAgent(userId);
@@ -321,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Referrer routes
-  app.post('/api/referrers/profile', isAuthenticated, async (req: any, res) => {
+  app.post('/api/referrers/profile', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const profileData = insertReferrerProfileSchema.parse({
@@ -339,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/referrer/profile', isAuthenticated, async (req: any, res) => {
+  app.post('/api/referrer/profile', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const profileData = insertReferrerProfileSchema.parse({
@@ -357,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/referrer/link', isAuthenticated, async (req: any, res) => {
+  app.post('/api/referrer/link', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { requestType, targetArea, apartmentType, notes } = req.body;
@@ -387,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/referrer/links', isAuthenticated, async (req: any, res) => {
+  app.get('/api/referrer/links', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const links = await storage.getReferralLinksByReferrer(userId);
@@ -399,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Chat routes
-  app.get('/api/conversations', isAuthenticated, async (req: any, res) => {
+  app.get('/api/conversations', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const conversations = await storage.getConversationsByUser(userId);
@@ -410,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/conversation/:id/messages', isAuthenticated, async (req: any, res) => {
+  app.get('/api/conversation/:id/messages', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       const messages = await storage.getMessagesByConversation(id);
@@ -421,7 +732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/conversation/:id/message', isAuthenticated, async (req: any, res) => {
+  app.post('/api/conversation/:id/message', isFirebaseAuthenticated, requireFeature('send_messages'), async (req: any, res) => {
     try {
       const { id } = req.params;
       const userId = req.user.claims.sub;
@@ -452,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI assistance routes
-  app.post('/api/ai/response-suggestion', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/response-suggestion', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const { type, context } = req.body;
       const suggestion = await generateResponseSuggestion({ type, ...context });
@@ -475,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload routes
-  app.post('/api/upload/license', isAuthenticated, upload.single('license'), async (req: any, res) => {
+  app.post('/api/upload/license', isFirebaseAuthenticated, upload.single('license'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -491,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification routes
-  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const notifications = await storage.getNotificationsByUser(userId);
@@ -502,7 +813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/notifications/:id/read', isFirebaseAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       const notification = await storage.markNotificationAsRead(id);

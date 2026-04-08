@@ -50,7 +50,7 @@ export default function Splash() {
   };
 
   const handleSignIn = () => {
-    setLocation('/role-selection');
+    setLocation('/auth');
   };
 
   return (

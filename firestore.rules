@@ -1,0 +1,287 @@
+// firestore.rules
+// Deploy with: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── HELPER FUNCTIONS ─────────────────────────────────────────
+
+    // Check if the request is authenticated at all
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the caller's role from their custom claims
+    // These claims are set by your backend when issuing Firebase tokens
+    function getRole() {
+      return request.auth.token.role;
+    }
+
+    function getCountry() {
+      return request.auth.token.country;
+    }
+
+    function getUserId() {
+      // Custom claim: your internal DB user ID stored as string
+      return request.auth.token.userId;
+    }
+
+    function isAgent() {
+      return isAuthenticated() && getRole() == 'agent';
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && getRole() == 'customer';
+    }
+
+    function isReferrer() {
+      return isAuthenticated() && getRole() == 'referrer';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getRole() == 'admin';
+    }
+
+    // Check if user is a participant in a specific conversation
+    function isConversationParticipant(conversationData) {
+      return getUserId() == conversationData.agentId.toString()
+          || getUserId() == conversationData.customerId.toString();
+    }
+
+    // Check if the conversation belongs to the user's country
+    function isSameCountry(conversationData) {
+      return conversationData.country == getCountry();
+    }
+
+    // Validate that a message only sets allowed fields
+    function isValidMessage(data) {
+      return data.keys().hasAll(['senderId', 'senderRole', 'content', 'type', 'createdAt'])
+          && data.keys().hasOnly(['senderId', 'senderRole', 'content', 'type', 'createdAt', 'readBy', 'propertyData'])
+          && data.content is string
+          && data.content.size() > 0
+          && data.content.size() <= 5000  // max message length
+          && data.type in ['text', 'property', 'image']
+          && data.senderRole in ['agent', 'customer'];
+    }
+
+    // Validate typing indicator
+    function isValidTypingIndicator(data) {
+      return data.keys().hasAll(['userId', 'startedAt', 'expiresAt'])
+          && data.userId is string;
+    }
+
+    // Rate limiting helper — check if last write was recent
+    // (Firestore doesn't have native rate limiting — we approximate)
+    function notTooFrequent(existingData) {
+      return existingData == null
+          || request.time > existingData.createdAt + duration.value(1, 's');
+    }
+
+    // ── USER PROFILES ─────────────────────────────────────────────
+    // Users can only read/write their own profile
+
+    match /userPresence/{userId} {
+      // Presence: online/offline status
+      allow read: if isAuthenticated();  // anyone logged in can see presence
+      allow write: if isAuthenticated()
+                   && getUserId() == userId;  // only own presence
+    }
+
+    // ── CONVERSATIONS ─────────────────────────────────────────────
+
+    match /conversations/{conversationId} {
+
+      // Read: only participants can read the conversation
+      allow read: if isAuthenticated()
+                  && isConversationParticipant(resource.data);
+
+      // Create: only your backend (via Admin SDK) creates conversations
+      // The Admin SDK bypasses these rules entirely — this blocks client-side creation
+      allow create: if false;
+
+      // Update: participants can update unread counts and lastMessage
+      // but cannot change participants or country
+      allow update: if isAuthenticated()
+                    && isConversationParticipant(resource.data)
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['agentId', 'customerId', 'country', 'customerRequestId'])
+                    && request.resource.data.status in ['active', 'closed'];
+
+      // Delete: nobody can delete conversations from client
+      allow delete: if false;
+
+      // ── MESSAGES subcollection ──────────────────────────────────
+
+      match /messages/{messageId} {
+
+        // Read: only conversation participants
+        allow read: if isAuthenticated()
+                    && isConversationParticipant(
+                        get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                       );
+
+        // Create: participants can send messages — validated strictly
+        allow create: if isAuthenticated()
+                      && isConversationParticipant(
+                          get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                         )
+                      && isValidMessage(request.resource.data)
+                      && request.resource.data.senderId.toString() == getUserId()
+                      // Enforce correct senderRole matches their actual role
+                      && (
+                            (isAgent() && request.resource.data.senderRole == 'agent')
+                         || (isCustomer() && request.resource.data.senderRole == 'customer')
+                         )
+                      // Property cards can only be sent by agents
+                      && (
+                            request.resource.data.type != 'property'
+                         || isAgent()
+                         );
+
+        // Update: only to add yourself to readBy array
+        allow update: if isAuthenticated()
+                      && isConversationParticipant(
+                          get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                         )
+                      // Can ONLY change readBy — nothing else
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['readBy'])
+                      // Can only ADD your own ID to readBy, not remove others
+                      && request.resource.data.readBy.hasAll(resource.data.readBy)
+                      && request.resource.data.readBy.hasAll([getUserId()]);
+
+        // Delete: nobody deletes messages from client
+        allow delete: if false;
+      }
+
+      // ── TYPING INDICATORS subcollection ────────────────────────
+
+      match /typing/{userId} {
+
+        // Read: only participants can see who is typing
+        allow read: if isAuthenticated()
+                    && isConversationParticipant(
+                        get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                       );
+
+        // Write: can only write/delete your OWN typing indicator
+        allow write: if isAuthenticated()
+                     && getUserId() == userId
+                     && isConversationParticipant(
+                         get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                        )
+                     && (
+                           request.resource == null  // deleting
+                        || isValidTypingIndicator(request.resource.data)
+                        );
+      }
+    }
+
+    // ── NOTIFICATIONS (real-time bell icon) ──────────────────────
+
+    match /notifications/{userId}/{notificationId} {
+
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() && getUserId() == userId;
+
+      // Only backend creates notifications (Admin SDK bypasses rules)
+      allow create: if false;
+
+      // Users can mark their own notifications as read
+      allow update: if isAuthenticated()
+                    && getUserId() == userId
+                    // Can ONLY change isRead field
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['isRead', 'readAt'])
+                    && request.resource.data.isRead == true;
+
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && getUserId() == userId;
+    }
+
+    // ── PROPERTY LISTINGS (real-time availability) ────────────────
+    // Agents push listings into chats — stored in Firestore for real-time
+
+    match /propertyListings/{listingId} {
+
+      // Anyone authenticated can read listings
+      allow read: if isAuthenticated();
+
+      // Only agents can create listings
+      allow create: if isAgent()
+                    && request.resource.data.agentId.toString() == getUserId()
+                    && request.resource.data.keys().hasAll([
+                        'agentId', 'title', 'price', 'currency',
+                        'propertyType', 'country', 'city', 'createdAt'
+                       ])
+                    && request.resource.data.price is number
+                    && request.resource.data.price > 0;
+
+      // Agents can only update their own listings
+      allow update: if isAgent()
+                    && resource.data.agentId.toString() == getUserId()
+                    // Cannot change the agentId or country after creation
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['agentId', 'country']);
+
+      // Agents can delete their own listings
+      allow delete: if isAgent()
+                    && resource.data.agentId.toString() == getUserId();
+    }
+
+    // ── AGENT PUBLIC PROFILES (shown to customers during matching) ─
+
+    match /agentPublicProfiles/{agentId} {
+
+      // Anyone can read public agent profiles
+      allow read: if isAuthenticated();
+
+      // Only the agent themselves or admin can write
+      // (your backend keeps this in sync with Postgres)
+      allow write: if isAdmin()
+                   || (isAgent() && getUserId() == agentId);
+    }
+
+    // ── REFERRAL LINK ANALYTICS (real-time click tracking) ────────
+
+    match /referralAnalytics/{shortCode} {
+
+      // Referrers can only read their own analytics
+      allow read: if isAuthenticated()
+                  && (
+                        isAdmin()
+                     || resource.data.referrerId.toString() == getUserId()
+                     );
+
+      // Only backend writes analytics (via Admin SDK)
+      allow write: if false;
+    }
+
+    // ── MARKET DATA (read-only for all authenticated users) ───────
+
+    match /marketData/{country}/{district} {
+      allow read: if isAuthenticated() && getCountry() == country;
+      allow write: if false; // backend only
+    }
+
+    // ── ADMIN COLLECTIONS ─────────────────────────────────────────
+
+    match /adminLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // backend only
+    }
+
+    match /flaggedContent/{flagId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated(); // users can flag content
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── CATCH-ALL — deny everything not explicitly allowed ─────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -18,6 +18,7 @@ import CustomerDashboard from "@/pages/customer-dashboard";
 import AgentDashboard from "@/pages/agent-dashboard";
 import ReferrerDashboard from "@/pages/referrer-dashboard";
 import Chat from "@/pages/chat";
+import AuthPage from "@/pages/auth";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 
 function Router() {
@@ -65,7 +66,7 @@ function Router() {
   }
 
   // Redirect to splash if not authenticated and not on splash or onboarding
-  const isAuthRoute = location === '/splash' || location === '/onboarding' || location === '/role-selection' || location === '/landing';
+  const isAuthRoute = location === '/splash' || location === '/onboarding' || location === '/role-selection' || location === '/landing' || location === '/auth';
   
   if (!isAuthenticated && !isAuthRoute && location !== '/') {
     // Stop the 401 loop by only redirecting if we are not already at splash
@@ -102,6 +103,7 @@ function Router() {
             <Route path="/splash" component={Splash} />
             <Route path="/onboarding" component={Onboarding} />
             <Route path="/role-selection" component={RoleSelection} />
+            <Route path="/auth" component={AuthPage} />
             <Route path="/landing" component={Landing} />
           </>
         ) : !onboardingComplete ? (
