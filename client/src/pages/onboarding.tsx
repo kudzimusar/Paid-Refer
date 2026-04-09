@@ -1,924 +1,501 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, 
-  Building2, 
-  Users, 
-  Briefcase, 
-  Shield,
-  ArrowRight,
-  ArrowLeft,
-  Phone,
-  Mail,
-  Check,
-  MessageCircle
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, ArrowRight, Mail, Phone, MessageCircle, Check, Sparkles } from "lucide-react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { ChipSelector, StepProgress, Counter } from "@/components/ui/primitives";
+import { useParams } from "wouter";
 
-const contactDetailsSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
+// ─── Schemas ───────────────────────────────────────────────
+const contactSchema = z.object({
+  firstName: z.string().min(1, "First name required"),
+  lastName: z.string().min(1, "Last name required"),
   middleName: z.string().optional(),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Please enter a valid email"),
-  phoneCountryCode: z.string().default('+81'),
-  phone: z.string().min(8, "Please enter a valid phone number"),
-  preferredContactMethod: z.enum(['whatsapp', 'line', 'email', 'phone']),
+  email: z.string().email("Valid email required"),
+  phone: z.string().min(6, "Phone number required"),
+  phoneCountryCode: z.string().default("+263"),
+  preferredContactMethod: z.enum(["email", "phone", "whatsapp", "line"]),
   lineId: z.string().optional(),
   whatsappNumber: z.string().optional(),
 });
 
-const agentProfileSchema = z.object({
-  licenseNumber: z.string().min(1, "License number is required"),
+const agentSchema = z.object({
+  licenseNumber: z.string().min(3, "License number required"),
   areasCovered: z.array(z.string()).min(1, "Select at least one area"),
-  propertyTypes: z.array(z.string()).min(1, "Select at least one property type"),
+  propertyTypes: z.array(z.string()).min(1, "Select at least one type"),
   languagesSpoken: z.array(z.string()).min(1, "Select at least one language"),
-  specializations: z.array(z.string()).optional(),
+  specializations: z.array(z.string()).default([]),
 });
 
-const referrerProfileSchema = z.object({
-  preferredRewardMethod: z.enum(['bank', 'ewallet', 'crypto']),
+const referrerSchema = z.object({
+  preferredRewardMethod: z.enum(["bank", "ewallet", "crypto"]),
   bankName: z.string().optional(),
   accountNumber: z.string().optional(),
-  ewalletProvider: z.string().optional(),
-  ewalletAccountId: z.string().optional(),
 });
 
-type ContactDetails = z.infer<typeof contactDetailsSchema>;
-type AgentProfile = z.infer<typeof agentProfileSchema>;
-type ReferrerProfile = z.infer<typeof referrerProfileSchema>;
-
-type OnboardingStep = 'role' | 'contact' | 'profile' | 'complete';
-
-const roles = [
-  {
-    id: 'customer',
-    title: 'Looking for an Apartment',
-    description: 'Find your perfect Tokyo home with verified agents',
-    icon: User,
-    color: 'bg-blue-500',
-    hasProfile: false,
-  },
-  {
-    id: 'agent',
-    title: 'Real Estate Agent',
-    description: 'Connect with clients and grow your business',
-    icon: Briefcase,
-    color: 'bg-green-500',
-    hasProfile: true,
-  },
-  {
-    id: 'referrer',
-    title: 'Referrer',
-    description: 'Earn commissions by referring clients',
-    icon: Users,
-    color: 'bg-purple-500',
-    hasProfile: true,
-  },
-  {
-    id: 'admin',
-    title: 'Administrator',
-    description: 'Manage the platform and users',
-    icon: Shield,
-    color: 'bg-orange-500',
-    hasProfile: false,
-  },
+// ─── Data ──────────────────────────────────────────────────
+const COUNTRY_CODES = [
+  { code: "+263", flag: "🇿🇼", country: "ZW" },
+  { code: "+27",  flag: "🇿🇦", country: "ZA" },
+  { code: "+81",  flag: "🇯🇵", country: "JP" },
+  { code: "+44",  flag: "🇬🇧", country: "GB" },
+  { code: "+1",   flag: "🇺🇸", country: "US" },
 ];
 
-const areas = [
-  "Shibuya", "Shinjuku", "Harajuku", "Roppongi", "Ginza", "Akihabara",
-  "Ikebukuro", "Ueno", "Asakusa", "Tsukiji", "Odaiba", "Ebisu",
-  "Meguro", "Nakano", "Kichijoji", "Setagaya"
+const CONTACT_METHODS = [
+  { id: "email",    label: "Email",   icon: Mail, color: "text-blue-500",   bg: "bg-blue-50" },
+  { id: "phone",    label: "Phone",   icon: Phone, color: "text-green-500", bg: "bg-green-50" },
+  { id: "whatsapp", label: "WhatsApp",icon: MessageCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
+  { id: "line",     label: "LINE",    icon: MessageCircle, color: "text-green-600", bg: "bg-green-50" },
 ];
 
-const propertyTypes = ['1K', '1DK', '1LDK', '2K', '2DK', '2LDK', '3K+'];
-const languages = ['Japanese', 'English', 'Chinese', 'Korean', 'Spanish', 'French', 'Vietnamese', 'Thai'];
-const specializations = ['Student Housing', 'Corporate Rentals', 'Luxury Properties', 'Budget Housing', 'Pet-Friendly', 'International Clients', 'Short-term Rentals'];
+const AREAS_BY_ROLE = ["Harare CBD", "Borrowdale", "Avondale", "Chitungwiza",
+  "Sandton", "Cape Town CBD", "Durban North", "Pretoria East",
+  "Shibuya", "Shinjuku", "Minato", "Sumida", "Setagaya", "Shinagawa"];
 
-export default function Onboarding() {
-  const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
-  const { toast } = useToast();
-  
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('role');
-  const [selectedRole, setSelectedRole] = useState<string>('');
+const PROPERTY_TYPES = [
+  "Stand", "Cluster", "House", "Flat", "Commercial",
+  "Sectional Title", "Full Title", "Townhouse", "Apartment",
+  "1K", "1DK", "1LDK", "2LDK", "3LDK", "4LDK",
+];
 
-  const contactForm = useForm<ContactDetails>({
-    resolver: zodResolver(contactDetailsSchema),
-    defaultValues: {
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      email: '',
-      phoneCountryCode: '+81',
-      phone: '',
-      preferredContactMethod: 'email',
-      lineId: '',
-      whatsappNumber: '',
-    },
+const LANGUAGES = [
+  { label: "English", value: "english", icon: "🇬🇧" },
+  { label: "Shona", value: "shona", icon: "🇿🇼" },
+  { label: "Ndebele", value: "ndebele", icon: "🇿🇼" },
+  { label: "Zulu", value: "zulu", icon: "🇿🇦" },
+  { label: "Japanese", value: "japanese", icon: "🇯🇵" },
+  { label: "Afrikaans", value: "afrikaans", icon: "🇿🇦" },
+];
+
+const SPECIALIZATIONS = [
+  "Residential", "Commercial", "Industrial", "Luxury", "Student Housing",
+  "Off-Plan", "Investment", "Auctions",
+];
+
+const PAYMENT_METHODS = [
+  { id: "bank", label: "Bank Transfer", icon: "🏦", desc: "Direct to your account (1–3 days)" },
+  { id: "ewallet", label: "E-Wallet", icon: "📱", desc: "EcoCash, PayPal, etc. (instant)" },
+  { id: "crypto", label: "Crypto", icon: "₿", desc: "BTC, USDT, etc. (1–6 hours)" },
+];
+
+// ─── Step 1: Contact Details ────────────────────────────────
+function ContactStep({ onNext }: { onNext: (data: any) => void }) {
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    resolver: zodResolver(contactSchema),
+    defaultValues: { phoneCountryCode: "+263", preferredContactMethod: "whatsapp" },
   });
-
-  const agentForm = useForm<AgentProfile>({
-    resolver: zodResolver(agentProfileSchema),
-    defaultValues: {
-      licenseNumber: '',
-      areasCovered: [],
-      propertyTypes: [],
-      languagesSpoken: [],
-      specializations: [],
-    },
-  });
-
-  const referrerForm = useForm<ReferrerProfile>({
-    resolver: zodResolver(referrerProfileSchema),
-    defaultValues: {
-      preferredRewardMethod: 'bank',
-      bankName: '',
-      accountNumber: '',
-      ewalletProvider: '',
-      ewalletAccountId: '',
-    },
-  });
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      if (user.firstName) {
-        contactForm.setValue('firstName', user.firstName);
-      }
-      if (user.lastName) {
-        contactForm.setValue('lastName', user.lastName);
-      }
-      if (user.email) {
-        contactForm.setValue('email', user.email);
-      }
-      if (user.role && user.role !== 'customer') {
-        setSelectedRole(user.role);
-      }
-      if (user.onboardingStatus === 'completed') {
-        switch (user.role) {
-          case 'customer':
-            setLocation('/');
-            break;
-          case 'agent':
-            setLocation('/agent-dashboard');
-            break;
-          case 'referrer':
-            setLocation('/referrer-dashboard');
-            break;
-          case 'admin':
-            setLocation('/admin');
-            break;
-        }
-      }
-    }
-  }, [user, isLoading]);
-
-  const setRoleMutation = useMutation({
-    mutationFn: async (role: string) => {
-      const res = await apiRequest('POST', '/api/auth/set-role', { role });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-    },
-  });
-
-  const updateContactMutation = useMutation({
-    mutationFn: async (data: ContactDetails) => {
-      const res = await apiRequest('PUT', '/api/auth/contact-details', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-    },
-  });
-
-  const setupAgentMutation = useMutation({
-    mutationFn: async (data: AgentProfile) => {
-      const res = await apiRequest('POST', '/api/agents/profile', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-    },
-  });
-
-  const setupReferrerMutation = useMutation({
-    mutationFn: async (data: ReferrerProfile) => {
-      const payload = {
-        userId: user?.id,
-        preferredRewardMethod: data.preferredRewardMethod,
-        bankDetails: data.preferredRewardMethod === 'bank' ? {
-          bankName: data.bankName,
-          accountNumber: data.accountNumber,
-        } : undefined,
-        ewalletDetails: data.preferredRewardMethod === 'ewallet' ? {
-          provider: data.ewalletProvider,
-          accountId: data.ewalletAccountId,
-        } : undefined,
-      };
-      const res = await apiRequest('POST', '/api/referrers/profile', payload);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-    },
-  });
-
-  const completeOnboardingMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/auth/complete-onboarding', {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      setCurrentStep('complete');
-    },
-  });
-
-  const handleRoleSelect = async (roleId: string) => {
-    setSelectedRole(roleId);
-    if (user) {
-      await setRoleMutation.mutateAsync(roleId);
-    }
-    setCurrentStep('contact');
-  };
-
-  const handleContactSubmit = async (data: ContactDetails) => {
-    try {
-      if (user) {
-        await updateContactMutation.mutateAsync(data);
-      }
-      const role = roles.find(r => r.id === selectedRole);
-      if (role?.hasProfile) {
-        setCurrentStep('profile');
-      } else {
-        await completeOnboardingMutation.mutateAsync();
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save contact details. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAgentSubmit = async (data: AgentProfile) => {
-    try {
-      await setupAgentMutation.mutateAsync(data);
-      await completeOnboardingMutation.mutateAsync();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create agent profile. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleReferrerSubmit = async (data: ReferrerProfile) => {
-    try {
-      await setupReferrerMutation.mutateAsync(data);
-      await completeOnboardingMutation.mutateAsync();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create referrer profile. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGoToDashboard = () => {
-    switch (selectedRole) {
-      case 'customer':
-        setLocation('/');
-        break;
-      case 'agent':
-        setLocation('/agent-dashboard');
-        break;
-      case 'referrer':
-        setLocation('/referrer-dashboard');
-        break;
-      case 'admin':
-        setLocation('/admin');
-        break;
-      default:
-        setLocation('/');
-    }
-  };
-
-  const handleBack = () => {
-    switch (currentStep) {
-      case 'contact':
-        setCurrentStep('role');
-        break;
-      case 'profile':
-        setCurrentStep('contact');
-        break;
-    }
-  };
-
-  const preferredMethod = contactForm.watch('preferredContactMethod');
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  const stepNumber = currentStep === 'role' ? 1 : currentStep === 'contact' ? 2 : currentStep === 'profile' ? 3 : 4;
-  const totalSteps = roles.find(r => r.id === selectedRole)?.hasProfile ? 3 : 2;
+  const [contactCode, setContactCode] = useState("+263");
+  const method = watch("preferredContactMethod");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {currentStep !== 'complete' && (
-        <div className="bg-white border-b px-4 py-3">
-          <div className="max-w-md mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              {currentStep !== 'role' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBack}
-                  className="text-gray-600"
-                  data-testid="button-back"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-1" />
-                  Back
-                </Button>
-              )}
-              <span className="text-sm text-gray-500 ml-auto">
-                Step {stepNumber} of {totalSteps}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(stepNumber / totalSteps) * 100}%` }}
+    <form onSubmit={handleSubmit(onNext)} className="space-y-5">
+      {/* Name row */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-semibold text-neutral-700 mb-1.5">First Name *</label>
+          <input {...register("firstName")} placeholder="Tendai" className="input-premium w-full" />
+          {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName.message}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Last Name *</label>
+          <input {...register("lastName")} placeholder="Moyo" className="input-premium w-full" />
+          {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName.message}</p>}
+        </div>
+      </div>
+
+      {/* Email */}
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Email *</label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <input {...register("email")} type="email" placeholder="you@example.com"
+            className="input-premium w-full pl-10" />
+        </div>
+        {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
+      </div>
+
+      {/* Phone */}
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Phone *</label>
+        <div className="flex gap-2">
+          <select
+            {...register("phoneCountryCode")}
+            className="input-premium w-28 flex-shrink-0"
+            onChange={(e) => setContactCode(e.target.value)}
+          >
+            {COUNTRY_CODES.map(c => (
+              <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+            ))}
+          </select>
+          <div className="relative flex-1">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input {...register("phone")} type="tel" placeholder="77 123 4567"
+              className="input-premium w-full pl-10" />
+          </div>
+        </div>
+        {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
+      </div>
+
+      {/* Contact method */}
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Preferred Contact *</label>
+        <div className="grid grid-cols-2 gap-2">
+          {CONTACT_METHODS.map((m) => {
+            const Icon = m.icon;
+            const isActive = method === m.id;
+            return (
+              <label key={m.id}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                  ${isActive ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                <input type="radio" value={m.id} {...register("preferredContactMethod")} className="sr-only" />
+                <div className={`w-9 h-9 ${m.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 ${m.color}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-800">{m.label}</p>
+                </div>
+                {isActive && <Check className="w-4 h-4 text-blue-500 ml-auto" />}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Conditional LINE ID */}
+      <AnimatePresence>
+        {method === "line" && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">LINE ID *</label>
+            <input {...register("lineId")} placeholder="@yourlineid" className="input-premium w-full" />
+          </motion.div>
+        )}
+        {method === "whatsapp" && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">WhatsApp Number</label>
+            <input {...register("whatsappNumber")} placeholder="+263 77 123 4567" className="input-premium w-full" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <button type="submit" className="btn-premium w-full flex items-center justify-center gap-2 mt-2">
+        Continue <ArrowRight className="w-4 h-4" />
+      </button>
+    </form>
+  );
+}
+
+// ─── Step 2a: Agent Profile ─────────────────────────────────
+function AgentProfileStep({ onNext, onBack }: { onNext: (data: any) => void; onBack: () => void }) {
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+    resolver: zodResolver(agentSchema),
+    defaultValues: { areasCovered: [], propertyTypes: [], languagesSpoken: [], specializations: [] },
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onNext)} className="space-y-5">
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">License Number *</label>
+        <input {...register("licenseNumber")} placeholder="ZREB-2024-XXXXX" className="input-premium w-full" />
+        {errors.licenseNumber && <p className="text-xs text-red-500 mt-1">{errors.licenseNumber.message}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Areas Covered *</label>
+        <div className="max-h-36 overflow-y-auto space-y-1 border border-gray-200 rounded-xl p-3 no-scrollbar">
+          {AREAS_BY_ROLE.map((area) => (
+            <label key={area} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer">
+              <input type="checkbox" value={area}
+                onChange={(e) => {
+                  const current = watch("areasCovered") ?? [];
+                  setValue("areasCovered", e.target.checked ? [...current, area] : current.filter((a: string) => a !== area));
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-primary"
               />
-            </div>
+              <span className="text-sm text-neutral-700">{area}</span>
+            </label>
+          ))}
+        </div>
+        {errors.areasCovered && <p className="text-xs text-red-500 mt-1">{String(errors.areasCovered.message)}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Types *</label>
+        <ChipSelector
+          options={PROPERTY_TYPES.map(t => ({ label: t, value: t }))}
+          selected={watch("propertyTypes") ?? []}
+          onChange={(v) => setValue("propertyTypes", v)}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Languages *</label>
+        <ChipSelector
+          options={LANGUAGES}
+          selected={watch("languagesSpoken") ?? []}
+          onChange={(v) => setValue("languagesSpoken", v)}
+          color="green"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Specializations</label>
+        <ChipSelector
+          options={SPECIALIZATIONS.map(s => ({ label: s, value: s }))}
+          selected={watch("specializations") ?? []}
+          onChange={(v) => setValue("specializations", v)}
+          color="purple"
+        />
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onBack}
+          className="flex-1 h-12 rounded-xl border-2 border-gray-200 text-neutral-700 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+        <button type="submit" className="flex-2 btn-premium flex-1 flex items-center justify-center gap-2">
+          Complete <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Step 2b: Referrer Payment Setup ───────────────────────
+function ReferrerPaymentStep({ onNext, onBack }: { onNext: (data: any) => void; onBack: () => void }) {
+  const [method, setMethod] = useState<"bank"|"ewallet"|"crypto">("bank");
+  const { register, handleSubmit } = useForm();
+
+  return (
+    <form onSubmit={handleSubmit((d) => onNext({ ...d, preferredRewardMethod: method }))} className="space-y-5">
+      <div>
+        <label className="block text-sm font-semibold text-neutral-700 mb-2">Payout Method *</label>
+        <div className="space-y-2">
+          {PAYMENT_METHODS.map((pm) => (
+            <label key={pm.id}
+              onClick={() => setMethod(pm.id as any)}
+              className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all
+                ${method === pm.id ? "border-primary bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+              <span className="text-2xl">{pm.icon}</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-neutral-800">{pm.label}</p>
+                <p className="text-xs text-neutral-500">{pm.desc}</p>
+              </div>
+              {method === pm.id && <Check className="w-5 h-5 text-primary" />}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {method === "bank" && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Bank Name</label>
+            <input {...register("bankName")} placeholder="e.g. CBZ Bank" className="input-premium w-full" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Account Number</label>
+            <input {...register("accountNumber")} placeholder="1234567890" className="input-premium w-full" />
           </div>
         </div>
       )}
 
-      <div className="max-w-md mx-auto px-4 py-8">
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onBack}
+          className="flex-1 h-12 rounded-xl border-2 border-gray-200 text-neutral-700 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+        <button type="submit" className="flex-2 btn-premium flex-1 flex items-center justify-center gap-2">
+          Finish Setup <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Completion Screen ──────────────────────────────────────
+function CompletionScreen({ role }: { role: string }) {
+  const [, setLocation] = useLocation();
+  const { user } = useAuthContext();
+
+  const ROLE_DESTINATIONS: Record<string, string> = {
+    agent: "/dashboard", customer: "/search", referrer: "/refer", admin: "/admin"
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="text-center py-8 space-y-6"
+    >
+      {/* Success ring */}
+      <div className="relative w-24 h-24 mx-auto">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.1 }}
+          className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg"
+        >
+          <Check className="w-12 h-12 text-white stroke-[3]" />
+        </motion.div>
+        <motion.div
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{ scale: 2.2, opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="absolute inset-0 rounded-full border-4 border-emerald-400"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-extrabold text-neutral-900 mb-2">
+          🎉 You're all set, {user?.firstName || ""}!
+        </h2>
+        <p className="text-neutral-500 text-sm">
+          You joined as a <span className="font-semibold text-primary capitalize">{role}</span> on Refer.
+        </p>
+      </div>
+
+      <div className="glass-morphism rounded-2xl p-4 text-left space-y-2">
+        {role === "agent" && [
+          "✦ Your profile is being reviewed by Refer AI",
+          "✦ Get verified to unlock premium leads",
+          "✦ Start accepting leads today",
+        ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
+        {role === "customer" && [
+          "✦ Submit your first property request",
+          "✦ We'll match you with verified agents",
+          "✦ Chat directly with your matches",
+        ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
+        {role === "referrer" && [
+          "✦ Generate your first referral link",
+          "✦ Share it with people looking for homes",
+          "✦ Earn when deals close",
+        ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
+      </div>
+
+      <button
+        onClick={() => setLocation(ROLE_DESTINATIONS[role] ?? "/register")}
+        className="btn-premium w-full flex items-center justify-center gap-2"
+      >
+        <Sparkles className="w-4 h-4" />
+        Go to My Dashboard
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Main Onboarding Orchestrator ──────────────────────────
+export default function OnboardingPage() {
+  const { role } = useParams<{ role: string }>();
+  const { user } = useAuthContext();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [step, setStep] = useState(1);
+  const [contactData, setContactData] = useState<any>(null);
+  const [done, setDone] = useState(false);
+
+  const isAgent = role === "agent";
+  const isReferrer = role === "referrer";
+  const isCustomer = role === "customer";
+  const totalSteps = isAgent || isReferrer ? 2 : 1;
+
+  const STEP_LABELS = isAgent
+    ? ["Contact Details", "Agent Profile"]
+    : isReferrer
+    ? ["Contact Details", "Payment Setup"]
+    : ["Contact Details"];
+
+  const setRoleMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/auth/set-role", { role }),
+  });
+
+  const contactMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("PUT", "/api/auth/contact-details", data),
+    onSuccess: () => {
+      if (isCustomer) completeMutation.mutate({});
+      else setStep(2);
+    },
+    onError: () => toast({ title: "Error", description: "Failed to save contact details. Please try again.", variant: "destructive" }),
+  });
+
+  const profileMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", `/api/agent/profile`, data),
+    onSuccess: () => completeMutation.mutate({}),
+    onError: () => toast({ title: "Error", description: "Failed to save agent profile.", variant: "destructive" }),
+  });
+
+  const referrerMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", `/api/referrer/profile`, data),
+    onSuccess: () => completeMutation.mutate({}),
+    onError: () => toast({ title: "Error", description: "Failed to save payment info.", variant: "destructive" }),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/complete-onboarding", {}),
+    onSuccess: () => setDone(true),
+    onError: () => toast({ title: "Error", description: "Onboarding completion failed. Please try again.", variant: "destructive" }),
+  });
+
+  const handleContactNext = (data: any) => {
+    setContactData(data);
+    contactMutation.mutate(data);
+  };
+
+  const handleProfileNext = (data: any) => {
+    profileMutation.mutate(data);
+  };
+
+  const handleReferrerNext = (data: any) => {
+    referrerMutation.mutate(data);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50/50 to-white">
+      <div className="max-w-md mx-auto px-5 pt-12 pb-8">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          {!done && step > 1 && (
+            <button onClick={() => setStep(s => s - 1)} className="p-2 -ml-1 hover:bg-white rounded-xl transition-colors">
+              <ArrowLeft className="w-5 h-5 text-neutral-600" />
+            </button>
+          )}
+          <div className="flex-1">
+            <h1 className="text-lg font-extrabold text-neutral-900 capitalize">
+              {done ? "Welcome!" : `${role} Registration`}
+            </h1>
+          </div>
+        </div>
+
+        {/* Progress */}
+        {!done && (
+          <div className="mb-6">
+            <StepProgress current={step} total={totalSteps} labels={STEP_LABELS} />
+          </div>
+        )}
+
+        {/* Steps */}
         <AnimatePresence mode="wait">
-          {currentStep === 'role' && (
-            <motion.div
-              key="role"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
-                  How will you use Refer?
-                </h1>
-                <p className="text-gray-600">
-                  Select your role to get started
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {roles.map((role) => {
-                  const Icon = role.icon;
-                  return (
-                    <Card
-                      key={role.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedRole === role.id ? 'ring-2 ring-blue-500' : ''
-                      }`}
-                      onClick={() => handleRoleSelect(role.id)}
-                      data-testid={`card-role-${role.id}`}
-                    >
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className={`${role.color} p-3 rounded-xl`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{role.title}</h3>
-                          <p className="text-sm text-gray-500">{role.description}</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-gray-400" />
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {!user && (
-                <p className="text-center text-sm text-gray-500 mt-6">
-                  You'll be asked to sign in after selecting your role
-                </p>
-              )}
+          {done ? (
+            <CompletionScreen role={role ?? "customer"} />
+          ) : step === 1 ? (
+            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <ContactStep onNext={handleContactNext} />
             </motion.div>
-          )}
-
-          {currentStep === 'contact' && (
-            <motion.div
-              key="contact"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
-                  Your Contact Details
-                </h1>
-                <p className="text-gray-600">
-                  Help us reach you about your apartment search
-                </p>
-              </div>
-
-              <form onSubmit={contactForm.handleSubmit(handleContactSubmit)} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      placeholder="John"
-                      {...contactForm.register("firstName")}
-                      data-testid="input-first-name"
-                    />
-                    {contactForm.formState.errors.firstName && (
-                      <p className="text-sm text-red-600 mt-1">
-                        {contactForm.formState.errors.firstName.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      placeholder="Smith"
-                      {...contactForm.register("lastName")}
-                      data-testid="input-last-name"
-                    />
-                    {contactForm.formState.errors.lastName && (
-                      <p className="text-sm text-red-600 mt-1">
-                        {contactForm.formState.errors.lastName.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="middleName">Middle Name (Optional)</Label>
-                  <Input
-                    id="middleName"
-                    placeholder="Michael"
-                    {...contactForm.register("middleName")}
-                    data-testid="input-middle-name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      className="pl-10"
-                      {...contactForm.register("email")}
-                      data-testid="input-email"
-                    />
-                  </div>
-                  {contactForm.formState.errors.email && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {contactForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <div className="flex gap-2">
-                    <Select
-                      defaultValue="+81"
-                      onValueChange={(value) => contactForm.setValue('phoneCountryCode', value)}
-                    >
-                      <SelectTrigger className="w-24" data-testid="select-country-code">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="+81">🇯🇵 +81</SelectItem>
-                        <SelectItem value="+1">🇺🇸 +1</SelectItem>
-                        <SelectItem value="+44">🇬🇧 +44</SelectItem>
-                        <SelectItem value="+86">🇨🇳 +86</SelectItem>
-                        <SelectItem value="+82">🇰🇷 +82</SelectItem>
-                        <SelectItem value="+65">🇸🇬 +65</SelectItem>
-                        <SelectItem value="+63">🇵🇭 +63</SelectItem>
-                        <SelectItem value="+66">🇹🇭 +66</SelectItem>
-                        <SelectItem value="+84">🇻🇳 +84</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="relative flex-1">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="090-1234-5678"
-                        className="pl-10"
-                        {...contactForm.register("phone")}
-                        data-testid="input-phone"
-                      />
-                    </div>
-                  </div>
-                  {contactForm.formState.errors.phone && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {contactForm.formState.errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label>Preferred Contact Method *</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {[
-                      { value: 'email', label: 'Email', icon: Mail },
-                      { value: 'phone', label: 'Phone Call', icon: Phone },
-                      { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
-                      { value: 'line', label: 'LINE', icon: MessageCircle },
-                    ].map((method) => {
-                      const Icon = method.icon;
-                      const isSelected = preferredMethod === method.value;
-                      return (
-                        <div
-                          key={method.value}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => contactForm.setValue('preferredContactMethod', method.value as any)}
-                          data-testid={`button-contact-method-${method.value}`}
-                        >
-                          <Icon className={`w-5 h-5 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${isSelected ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
-                            {method.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {preferredMethod === 'line' && (
-                  <div>
-                    <Label htmlFor="lineId">LINE ID</Label>
-                    <Input
-                      id="lineId"
-                      placeholder="your_line_id"
-                      {...contactForm.register("lineId")}
-                      data-testid="input-line-id"
-                    />
-                  </div>
-                )}
-
-                {preferredMethod === 'whatsapp' && (
-                  <div>
-                    <Label htmlFor="whatsappNumber">WhatsApp Number (if different from phone)</Label>
-                    <Input
-                      id="whatsappNumber"
-                      placeholder="+81 90-1234-5678"
-                      {...contactForm.register("whatsappNumber")}
-                      data-testid="input-whatsapp"
-                    />
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12"
-                  disabled={updateContactMutation.isPending}
-                  data-testid="button-continue"
-                >
-                  {updateContactMutation.isPending ? 'Saving...' : 'Continue'}
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </form>
+          ) : isAgent ? (
+            <motion.div key="step2a" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <AgentProfileStep onNext={handleProfileNext} onBack={() => setStep(1)} />
             </motion.div>
-          )}
-
-          {currentStep === 'profile' && selectedRole === 'agent' && (
-            <motion.div
-              key="agent-profile"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
-                  Agent Profile
-                </h1>
-                <p className="text-gray-600">
-                  Set up your professional profile to receive leads
-                </p>
-              </div>
-
-              <form onSubmit={agentForm.handleSubmit(handleAgentSubmit)} className="space-y-6">
-                <div>
-                  <Label htmlFor="licenseNumber">Real Estate License Number *</Label>
-                  <Input
-                    id="licenseNumber"
-                    placeholder="Enter your license number"
-                    {...agentForm.register("licenseNumber")}
-                    data-testid="input-license-number"
-                  />
-                  {agentForm.formState.errors.licenseNumber && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {agentForm.formState.errors.licenseNumber.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label>Areas Covered *</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto">
-                    {areas.map((area) => (
-                      <label key={area} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-gray-50">
-                        <Checkbox
-                          onCheckedChange={(checked) => {
-                            const current = agentForm.getValues("areasCovered") || [];
-                            if (checked) {
-                              agentForm.setValue("areasCovered", [...current, area]);
-                            } else {
-                              agentForm.setValue("areasCovered", current.filter(a => a !== area));
-                            }
-                          }}
-                          data-testid={`checkbox-area-${area.toLowerCase()}`}
-                        />
-                        <span className="text-sm">{area}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Property Types *</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {propertyTypes.map((type) => {
-                      const selected = agentForm.watch("propertyTypes")?.includes(type);
-                      return (
-                        <div
-                          key={type}
-                          className={`px-3 py-2 rounded-full text-sm cursor-pointer transition-all ${
-                            selected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => {
-                            const current = agentForm.getValues("propertyTypes") || [];
-                            if (selected) {
-                              agentForm.setValue("propertyTypes", current.filter(t => t !== type));
-                            } else {
-                              agentForm.setValue("propertyTypes", [...current, type]);
-                            }
-                          }}
-                          data-testid={`button-property-type-${type.toLowerCase()}`}
-                        >
-                          {type}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Languages Spoken *</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {languages.map((lang) => {
-                      const selected = agentForm.watch("languagesSpoken")?.includes(lang);
-                      return (
-                        <div
-                          key={lang}
-                          className={`px-3 py-2 rounded-full text-sm cursor-pointer transition-all ${
-                            selected ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => {
-                            const current = agentForm.getValues("languagesSpoken") || [];
-                            if (selected) {
-                              agentForm.setValue("languagesSpoken", current.filter(l => l !== lang));
-                            } else {
-                              agentForm.setValue("languagesSpoken", [...current, lang]);
-                            }
-                          }}
-                          data-testid={`button-language-${lang.toLowerCase()}`}
-                        >
-                          {lang}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Specializations (Optional)</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {specializations.map((spec) => {
-                      const selected = agentForm.watch("specializations")?.includes(spec);
-                      return (
-                        <div
-                          key={spec}
-                          className={`px-3 py-2 rounded-full text-sm cursor-pointer transition-all ${
-                            selected ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                          onClick={() => {
-                            const current = agentForm.getValues("specializations") || [];
-                            if (selected) {
-                              agentForm.setValue("specializations", current.filter(s => s !== spec));
-                            } else {
-                              agentForm.setValue("specializations", [...current, spec]);
-                            }
-                          }}
-                          data-testid={`button-specialization-${spec.toLowerCase().replace(/\s+/g, '-')}`}
-                        >
-                          {spec}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-12"
-                  disabled={setupAgentMutation.isPending || completeOnboardingMutation.isPending}
-                  data-testid="button-complete-profile"
-                >
-                  {setupAgentMutation.isPending ? 'Creating Profile...' : 'Complete Profile'}
-                </Button>
-              </form>
+          ) : isReferrer ? (
+            <motion.div key="step2b" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <ReferrerPaymentStep onNext={handleReferrerNext} onBack={() => setStep(1)} />
             </motion.div>
-          )}
-
-          {currentStep === 'profile' && selectedRole === 'referrer' && (
-            <motion.div
-              key="referrer-profile"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-step-title">
-                  Payment Setup
-                </h1>
-                <p className="text-gray-600">
-                  Set up how you'd like to receive your referral earnings
-                </p>
-              </div>
-
-              <form onSubmit={referrerForm.handleSubmit(handleReferrerSubmit)} className="space-y-6">
-                <div>
-                  <Label>Preferred Payment Method *</Label>
-                  <div className="space-y-3 mt-2">
-                    {[
-                      { value: 'bank', label: 'Bank Transfer', desc: 'Direct deposit to your bank account' },
-                      { value: 'ewallet', label: 'E-Wallet', desc: 'PayPay, LINE Pay, or other e-wallets' },
-                      { value: 'crypto', label: 'Cryptocurrency', desc: 'Bitcoin, Ethereum, or other crypto' },
-                    ].map((method) => {
-                      const selected = referrerForm.watch('preferredRewardMethod') === method.value;
-                      return (
-                        <div
-                          key={method.value}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                            selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => referrerForm.setValue('preferredRewardMethod', method.value as any)}
-                          data-testid={`button-payment-method-${method.value}`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium text-gray-900">{method.label}</h4>
-                              <p className="text-sm text-gray-500">{method.desc}</p>
-                            </div>
-                            {selected && <Check className="w-5 h-5 text-blue-600" />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {referrerForm.watch('preferredRewardMethod') === 'bank' && (
-                  <>
-                    <div>
-                      <Label htmlFor="bankName">Bank Name</Label>
-                      <Input
-                        id="bankName"
-                        placeholder="e.g., MUFG Bank"
-                        {...referrerForm.register("bankName")}
-                        data-testid="input-bank-name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="accountNumber">Account Number</Label>
-                      <Input
-                        id="accountNumber"
-                        placeholder="Your account number"
-                        {...referrerForm.register("accountNumber")}
-                        data-testid="input-account-number"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {referrerForm.watch('preferredRewardMethod') === 'ewallet' && (
-                  <>
-                    <div>
-                      <Label htmlFor="ewalletProvider">E-Wallet Provider</Label>
-                      <Select onValueChange={(value) => referrerForm.setValue('ewalletProvider', value)}>
-                        <SelectTrigger data-testid="select-ewallet-provider">
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paypay">PayPay</SelectItem>
-                          <SelectItem value="linepay">LINE Pay</SelectItem>
-                          <SelectItem value="rakutenpay">Rakuten Pay</SelectItem>
-                          <SelectItem value="merpay">Merpay</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="ewalletAccountId">Account ID / Phone Number</Label>
-                      <Input
-                        id="ewalletAccountId"
-                        placeholder="Your e-wallet ID or phone"
-                        {...referrerForm.register("ewalletAccountId")}
-                        data-testid="input-ewallet-account"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12"
-                  disabled={setupReferrerMutation.isPending || completeOnboardingMutation.isPending}
-                  data-testid="button-complete-profile"
-                >
-                  {setupReferrerMutation.isPending ? 'Setting Up...' : 'Complete Setup'}
-                </Button>
-              </form>
-            </motion.div>
-          )}
-
-          {currentStep === 'complete' && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center py-12"
-            >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6"
-              >
-                <Check className="w-10 h-10 text-white" />
-              </motion.div>
-              
-              <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-complete-title">
-                You're All Set!
-              </h1>
-              <p className="text-gray-600 mb-8">
-                {selectedRole === 'customer' && "Start searching for your perfect Tokyo apartment"}
-                {selectedRole === 'agent' && "Your profile is ready to receive leads"}
-                {selectedRole === 'referrer' && "Start sharing and earning referral commissions"}
-                {selectedRole === 'admin' && "Access the admin dashboard to manage the platform"}
-              </p>
-
-              <Button
-                onClick={handleGoToDashboard}
-                className="w-full max-w-xs h-12"
-                data-testid="button-go-to-dashboard"
-              >
-                Go to {selectedRole === 'customer' ? 'Home' : 'Dashboard'}
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </div>

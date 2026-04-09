@@ -4,25 +4,39 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
-import NotFoundPage from "@/pages/not-found";
-import LandingPage from "@/pages/landing";
-// Note: Some components below may not exist yet, they are placeholders for the full architecture
-import LoginPage from "@/pages/auth"; 
+import { lazy, Suspense } from "react";
+
+// ── Pages ──────────────────────────────────────────────────
+import SplashPage from "@/pages/splash";
+import LoginPage from "@/pages/auth";
 import RoleSelectPage from "@/pages/role-selection";
-import RegistrationFlow from "@/pages/onboarding";
+import OnboardingPage from "@/pages/onboarding";
 import AgentDashboard from "@/pages/agent-dashboard";
 import CustomerDashboard from "@/pages/customer-dashboard";
 import ReferrerDashboard from "@/pages/referrer-dashboard";
 import ChatPage from "@/pages/chat";
+import VerifyAgentPage from "@/pages/verify-agent";
 
-// Mock/Placeholder components for routes not yet built
-const FullPageSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-  </div>
-);
+// Lazy-load less-critical pages
+const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard"));
+const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
-// ProtectedRoute wrapper
+// ── Full-page spinner ──────────────────────────────────────
+function FullPageSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
+        <div
+          className="absolute inset-0 rounded-full border-4 border-transparent animate-spin"
+          style={{ borderTopColor: "#3b82f6" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Protected Route ────────────────────────────────────────
 function ProtectedRoute({ path, roles, component: Component }: {
   path: string;
   roles: string[];
@@ -30,14 +44,21 @@ function ProtectedRoute({ path, roles, component: Component }: {
 }) {
   const { user, loading } = useAuthContext();
 
+  const ROLE_FALLBACKS: Record<string, string> = {
+    agent: "/dashboard",
+    customer: "/search",
+    referrer: "/refer",
+    admin: "/admin",
+  };
+
   return (
     <Route path={path}>
       {loading ? (
         <FullPageSpinner />
       ) : !user ? (
         <Redirect to={`/login?next=${encodeURIComponent(path)}`} />
-      ) : !roles.includes(user.role) ? (
-        <Redirect to="/dashboard" />
+      ) : roles.length > 0 && !roles.includes(user.role ?? "") ? (
+        <Redirect to={ROLE_FALLBACKS[user.role ?? ""] ?? "/"} />
       ) : (
         <Component />
       )}
@@ -45,34 +66,41 @@ function ProtectedRoute({ path, roles, component: Component }: {
   );
 }
 
+// ── App Content ────────────────────────────────────────────
 function AppContent() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Switch>
-        {/* PUBLIC ROUTES */}
-        <Route path="/" component={LandingPage} />
-        <Route path="/login" component={LoginPage} />
-        <Route path="/register" component={RoleSelectPage} />
-        <Route path="/register/:role" component={RegistrationFlow} />
-        
-        {/* AGENT ROUTES */}
-        <ProtectedRoute path="/dashboard" roles={["agent"]} component={AgentDashboard} />
-        <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentDashboard} />
-        <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={AgentDashboard} />
-        
-        {/* CUSTOMER ROUTES */}
-        <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
-        <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
+    <div className="min-h-screen bg-background">
+      <Suspense fallback={<FullPageSpinner />}>
+        <Switch>
+          {/* ── Public ── */}
+          <Route path="/" component={SplashPage} />
+          <Route path="/login" component={LoginPage} />
+          <Route path="/register" component={RoleSelectPage} />
+          <Route path="/register/:role" component={OnboardingPage} />
 
-        {/* REFERRER ROUTES */}
-        <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
-        
-        <Route component={NotFoundPage} />
-      </Switch>
+          {/* ── Agent ── */}
+          <ProtectedRoute path="/dashboard" roles={["agent", "admin"]} component={AgentDashboard} />
+          <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentLeadDashboard} />
+          <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={AgentDashboard} />
+          <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
+
+          {/* ── Customer ── */}
+          <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
+          <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
+          <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
+
+          {/* ── Referrer ── */}
+          <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
+
+          {/* ── 404 ── */}
+          <Route component={NotFoundPage} />
+        </Switch>
+      </Suspense>
     </div>
   );
 }
 
+// ── Root App ───────────────────────────────────────────────
 function App() {
   const base = window.location.hostname.includes("github.io") ? "/Paid-Refer" : "";
 

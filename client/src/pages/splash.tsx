@@ -1,180 +1,174 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { Building2, Users, Handshake, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { PremiumCard, PremiumBadge } from "@/components/ui/premium-card";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { Users, Sparkles, TrendingUp, ArrowRight, Shield } from "lucide-react";
+import { Link } from "wouter";
+import { AppIcon } from "@/components/ui/Logo";
 
-export default function Splash() {
+const features = [
+  {
+    icon: Shield,
+    title: "Verified Agents",
+    desc: "AI-verified, licensed professionals only",
+    color: "from-blue-500/20 to-blue-600/10",
+    iconColor: "text-blue-500",
+  },
+  {
+    icon: Sparkles,
+    title: "AI Matching",
+    desc: "Gemini 2.5 Flash scores every lead",
+    color: "from-purple-500/20 to-purple-600/10",
+    iconColor: "text-purple-400",
+  },
+  {
+    icon: TrendingUp,
+    title: "Earn Referrals",
+    desc: "Share a link. Earn when deals close.",
+    color: "from-emerald-500/20 to-emerald-600/10",
+    iconColor: "text-emerald-400",
+  },
+];
+
+export default function SplashPage() {
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
-  const [showContent, setShowContent] = useState(false);
+  const { user, loading } = useAuthContext();
+  const isDemo = window.location.hostname.includes("github.io");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowContent(true);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      const onboardingComplete = user.onboardingStatus === 'completed';
-      if (onboardingComplete) {
-        switch (user.role) {
-          case 'customer':
-            setLocation('/');
-            break;
-          case 'agent':
-            setLocation('/agent-dashboard');
-            break;
-          case 'referrer':
-            setLocation('/referrer-dashboard');
-            break;
-          case 'admin':
-            setLocation('/admin');
-            break;
-          default:
-            // If role is set but onboarding isn't complete
-            setLocation('/onboarding');
-        }
-      } else if (user.role && user.role !== 'customer') {
-        // Only redirect if a specific role is chosen and onboarding is pending
-        setLocation('/onboarding');
-      }
+    if (!loading && user) {
+      const roleRoutes: Record<string, string> = {
+        agent: "/dashboard",
+        customer: "/search",
+        referrer: "/refer",
+        admin: "/admin",
+      };
+      setLocation(roleRoutes[user.role ?? ""] ?? "/register");
     }
-  }, [user, isLoading, setLocation]);
+  }, [user, loading, setLocation]);
 
-  const handleGetStarted = () => {
-    setLocation('/onboarding');
-  };
-
-  const handleSignIn = () => {
-    setLocation('/auth');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen hero-gradient flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full"
+          style={{ borderWidth: 3 }}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex flex-col">
-      <motion.div
-        className="flex-1 flex flex-col items-center justify-center px-6 py-12"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-      >
-        {window.location.hostname.includes("github.io") && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <PremiumBadge className="bg-white/20 text-white border-white/30 backdrop-blur-md">
-              Demo Environment
-            </PremiumBadge>
-          </motion.div>
-        )}
+    <div className="min-h-screen hero-gradient flex flex-col overflow-hidden relative">
+      {/* Background orbs */}
+      <div className="hero-orb w-96 h-96 bg-blue-400 -top-20 -left-20" />
+      <div className="hero-orb w-80 h-80 bg-purple-500 top-1/3 -right-20" />
+      <div className="hero-orb w-64 h-64 bg-indigo-400 bottom-20 left-10" />
+
+      {/* Demo badge */}
+      {isDemo && (
         <motion.div
-          className="relative mb-8"
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 200, 
-            damping: 15,
-            delay: 0.2 
-          }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 mx-auto mt-4"
         >
-          <div className="w-24 h-24 bg-white rounded-3xl shadow-2xl flex items-center justify-center">
-            <Building2 className="w-12 h-12 text-blue-600" />
+          <span className="bg-amber-400/20 text-amber-200 text-xs font-semibold px-4 py-1.5 rounded-full border border-amber-400/30">
+            ✦ Demo Environment
+          </span>
+        </motion.div>
+      )}
+
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 pt-12 pb-6">
+
+        {/* Logo */}
+        <motion.div
+          initial={{ scale: 0, rotate: -180, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className="relative mb-6"
+        >
+          {/* Real brand logo — white card variant rendered on gradient */}
+          <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-2xl">
+            <AppIcon size="xl" dark={false} className="w-full h-full" />
           </div>
-          <motion.div
-            className="absolute -right-2 -bottom-2 w-8 h-8 bg-green-400 rounded-full flex items-center justify-center shadow-lg"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.6, type: "spring" }}
-          >
-            <Handshake className="w-4 h-4 text-white" />
-          </motion.div>
         </motion.div>
 
-        <motion.h1
-          className="text-4xl font-bold text-white mb-2 text-center"
+        {/* Headline */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          data-testid="text-app-title"
+          transition={{ delay: 0.3 }}
+          className="text-center mb-2"
         >
-          Refer
-        </motion.h1>
+          <h1 className="text-5xl font-extrabold text-white tracking-tight mb-3" style={{ letterSpacing: "-0.03em" }}>
+            Refer
+          </h1>
+          <p className="text-lg text-white/80 font-medium leading-snug">
+            AI-powered real estate referrals<br />
+            <span className="text-white/60 text-base">Zimbabwe · South Africa · Japan</span>
+          </p>
+        </motion.div>
 
-        <motion.p
-          className="text-xl text-blue-100 text-center mb-8"
+        {/* Feature cards */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="grid grid-cols-3 gap-3 w-full max-w-sm mt-8 mb-10"
+        >
+          {features.map((feature, i) => {
+            const Icon = feature.icon;
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + i * 0.1 }}
+                className={`glass-card rounded-2xl p-3 text-center bg-gradient-to-b ${feature.color}`}
+              >
+                <div className="flex justify-center mb-2">
+                  <Icon className={`w-5 h-5 ${feature.iconColor}`} />
+                </div>
+                <p className="text-white text-[10px] font-semibold leading-tight">{feature.title}</p>
+                <p className="text-white/60 text-[9px] mt-0.5 leading-tight hidden sm:block">{feature.desc}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* CTAs */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          data-testid="text-app-tagline"
+          transition={{ delay: 0.7 }}
+          className="w-full max-w-sm space-y-3"
         >
-          Find Your Perfect Tokyo Home
-        </motion.p>
-
-        {showContent && (
-          <motion.div
-            className="w-full max-w-sm space-y-4"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-          >
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              {[
-                { icon: Users, label: "Verified Agents", delay: 0.3 },
-                { icon: Building2, label: "Tokyo Homes", delay: 0.4 },
-                { icon: Handshake, label: "Easy Refer", delay: 0.5 }
-              ].map((item, i) => (
-                <PremiumCard
-                  key={i}
-                  className="bg-white/10 backdrop-blur-md border-white/20 p-3 text-center"
-                  hover={true}
-                  delay={item.delay}
-                >
-                  <item.icon className="w-6 h-6 text-white mx-auto mb-2" />
-                  <span className="text-white/90 text-[10px] font-medium leading-tight block">
-                    {item.label}
-                  </span>
-                </PremiumCard>
-              ))}
-            </div>
-
-            <Button
-              onClick={handleGetStarted}
-              className="w-full bg-white text-blue-600 hover:bg-blue-50 h-14 text-lg font-semibold rounded-2xl shadow-lg"
-              data-testid="button-get-started"
-            >
+          <Link href="/register">
+            <button className="btn-premium w-full flex items-center justify-center gap-2 text-base font-semibold">
               Get Started
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-
-            <Button
-              onClick={handleSignIn}
-              variant="ghost"
-              className="w-full text-white hover:bg-white/10 h-12 text-base rounded-2xl"
-              data-testid="button-sign-in"
-            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </Link>
+          <Link href="/login">
+            <button className="btn-ghost-white w-full text-base font-medium">
               Already have an account? Sign In
-            </Button>
-          </motion.div>
-        )}
-      </motion.div>
+            </button>
+          </Link>
+        </motion.div>
+      </div>
 
-      <motion.div
-        className="pb-8 text-center"
+      {/* Bottom trust line */}
+      <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
+        className="relative z-10 text-center text-white/40 text-[10px] font-medium tracking-widest uppercase pb-8 px-6"
       >
-        <p className="text-white/60 text-sm">
-          Connecting renters with the best agents in Tokyo
-        </p>
-      </motion.div>
+        Powered by Gemini 2.5 Flash · Google Cloud
+      </motion.p>
     </div>
   );
 }

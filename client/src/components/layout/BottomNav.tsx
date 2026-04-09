@@ -1,0 +1,102 @@
+import { useLocation, Link } from "wouter";
+import { useAuthContext } from "@/contexts/AuthContext";
+import {
+  Home, Users, Building, MessageCircle, User,
+  TrendingUp, Link2, Banknote, Bell, LayoutDashboard,
+  BarChart3, Shield, Settings
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  href: string;
+}
+
+const CUSTOMER_NAV: NavItem[] = [
+  { icon: Home, label: "Request", href: "/search" },
+  { icon: MessageCircle, label: "Messages", href: "/chat" },
+  { icon: Bell, label: "Alerts", href: "/notifications" },
+  { icon: User, label: "Profile", href: "/profile" },
+];
+
+const AGENT_NAV: NavItem[] = [
+  { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
+  { icon: Users, label: "Leads", href: "/dashboard/leads" },
+  { icon: Building, label: "Listings", href: "/dashboard/listings" },
+  { icon: MessageCircle, label: "Chat", href: "/chat" },
+  { icon: User, label: "Profile", href: "/profile" },
+];
+
+const REFERRER_NAV: NavItem[] = [
+  { icon: TrendingUp, label: "Hub", href: "/refer" },
+  { icon: Link2, label: "Links", href: "/refer/links" },
+  { icon: Banknote, label: "Earnings", href: "/refer/payouts" },
+  { icon: User, label: "Profile", href: "/profile" },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { icon: BarChart3, label: "Overview", href: "/admin" },
+  { icon: Users, label: "Users", href: "/admin/users" },
+  { icon: Shield, label: "Verify", href: "/admin/verify" },
+  { icon: Banknote, label: "Payouts", href: "/admin/payouts" },
+  { icon: Settings, label: "Settings", href: "/admin/settings" },
+];
+
+export function BottomNav() {
+  const { user } = useAuthContext();
+  const [location] = useLocation();
+
+  if (!user) return null;
+
+  const navMap: Record<string, NavItem[]> = {
+    customer: CUSTOMER_NAV,
+    agent: AGENT_NAV,
+    referrer: REFERRER_NAV,
+    admin: ADMIN_NAV,
+  };
+
+  const items = navMap[user.role || "customer"] ?? CUSTOMER_NAV;
+
+  return (
+    <nav className="bottom-nav">
+      <div className={cn("grid h-full", `grid-cols-${items.length}`)}>
+        {items.map((item) => {
+          const isActive =
+            item.href === "/"
+              ? location === "/"
+              : location.startsWith(item.href);
+          const Icon = item.icon;
+
+          return (
+            <Link key={item.href} href={item.href}>
+              <button
+                className={cn(
+                  "bottom-nav-item w-full",
+                  isActive && "active"
+                )}
+              >
+                <div className={cn(isActive && "nav-icon-bg")}>
+                  <Icon
+                    className={cn(
+                      "w-5 h-5",
+                      isActive ? "text-primary" : "text-gray-400"
+                    )}
+                  />
+                </div>
+                <span
+                  className={cn(
+                    "text-[11px] font-medium mt-0.5",
+                    isActive ? "text-primary" : "text-gray-400"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </button>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
