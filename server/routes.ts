@@ -1150,6 +1150,8 @@ Empowering local agents & referrers.
       console.error("Verification endpoint error:", error);
       res.status(500).json({ message: error.message || "License verification failed" });
     }
+  });
+
   // ── PROPERTIES ────────────────────────────────────────────────────
 
   // Create listing
