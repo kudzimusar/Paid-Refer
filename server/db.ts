@@ -5,11 +5,14 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+const dbUrl = process.env.DATABASE_URL;
+
+if (!dbUrl || dbUrl.includes("user:password@host")) {
+  console.warn(
+    "⚠️  DATABASE_URL is not configured — API routes will fail but the UI will load.",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Create pool even with a dummy URL — routes will error gracefully at query time
+export const pool = new Pool({ connectionString: dbUrl || "postgres://localhost:5432/paid_refer_dev" });
 export const db = drizzle({ client: pool, schema });

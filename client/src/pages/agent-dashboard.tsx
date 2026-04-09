@@ -15,6 +15,8 @@ import { EmptyState, StatusBadge, AvatarInitials, SkeletonCard } from "@/compone
 import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
 import { Link } from "wouter";
+import { MarketPulseCard } from "@/components/dashboard/MarketPulseCard";
+
 
 interface Lead {
   id: string;
@@ -253,7 +255,23 @@ export default function AgentDashboard() {
               )}
             </AnimatePresence>
 
+            {/* ── Market Intelligence Pulse ── */}
+            {!isLoading && user && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="pt-2"
+              >
+                <MarketPulseCard 
+                  country={user.country || "ZW"} 
+                  city={user.city || "Harare"} 
+                />
+              </motion.div>
+            )}
+
             {/* ── Stats bar ── */}
+
             {isLoading ? (
               <div className="grid grid-cols-3 gap-3">
                 {[...Array(3)].map((_, i) => (

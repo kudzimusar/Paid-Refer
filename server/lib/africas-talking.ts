@@ -1,8 +1,8 @@
 import AfricasTalking from "africastalking";
 
 const at = AfricasTalking({
-  apiKey: process.env.AFRICAS_TALKING_API_KEY!,
-  username: process.env.AFRICAS_TALKING_USERNAME!,
+  apiKey: process.env.AFRICAS_TALKING_API_KEY || "dummy_api_key",
+  username: process.env.AFRICAS_TALKING_USERNAME || "sandbox",
 });
 
 const sms = at.SMS;

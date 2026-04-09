@@ -3,7 +3,7 @@ import { db } from "../db.ts";
 import { userProfiles, users } from "../../shared/schema.ts";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "dummy_sk", {
   apiVersion: "2024-06-20" as any, // Bypass version error if SDK is slightly different
 });
 

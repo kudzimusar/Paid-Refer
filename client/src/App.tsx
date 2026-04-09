@@ -16,10 +16,16 @@ import CustomerDashboard from "@/pages/customer-dashboard";
 import ReferrerDashboard from "@/pages/referrer-dashboard";
 import ChatPage from "@/pages/chat";
 import VerifyAgentPage from "@/pages/verify-agent";
+import ListingsPage from "@/pages/listings";
+import AdminDashboard from "@/pages/admin-dashboard";
+import SettingsPaymentsPage from "@/pages/settings-payments";
+
 
 // Lazy-load less-critical pages
 const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard"));
+const ReferralLandingPage = lazy(() => import("@/pages/referral-landing"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
+
 
 // ── Full-page spinner ──────────────────────────────────────
 function FullPageSpinner() {
@@ -77,12 +83,17 @@ function AppContent() {
           <Route path="/login" component={LoginPage} />
           <Route path="/register" component={RoleSelectPage} />
           <Route path="/register/:role" component={OnboardingPage} />
+          <Route path="/r/:shortCode" component={ReferralLandingPage} />
+
 
           {/* ── Agent ── */}
           <ProtectedRoute path="/dashboard" roles={["agent", "admin"]} component={AgentDashboard} />
           <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentLeadDashboard} />
-          <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={AgentDashboard} />
+          <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={ListingsPage} />
+          <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer"]} component={SettingsPaymentsPage} />
           <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
+          <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
+
 
           {/* ── Customer ── */}
           <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />

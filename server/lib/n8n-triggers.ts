@@ -54,3 +54,8 @@ export async function triggerLeadMatching(requestId: string) {
 export async function triggerCommissionPayout(dealId: string) {
   return triggerN8N("payout-commission", { dealId });
 }
+
+// 5. Triggered when deal is closed to request review
+export async function triggerReviewRequest(dealId: string, customerId: string, agentId: string) {
+  return triggerN8N("review-request", { dealId, customerId, agentId });
+}

@@ -4,11 +4,16 @@ import { storage } from '../storage';
 const project = process.env.GOOGLE_CLOUD_PROJECT || '';
 const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
-// Initialize Vertex AI
-const vertexAI = new VertexAI({ project: project, location: location });
-const generativeModel = vertexAI.getGenerativeModel({
-  model: 'gemini-1.5-pro',
-});
+// Lazy initialization — only create VertexAI when actually called
+let _model: ReturnType<VertexAI['getGenerativeModel']> | null = null;
+function getModel() {
+  if (!_model) {
+    if (!project) throw new Error("GOOGLE_CLOUD_PROJECT not set");
+    const vertexAI = new VertexAI({ project, location });
+    _model = vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  }
+  return _model;
+}
 
 interface VerificationResult {
   isAuthentic: boolean;
@@ -69,7 +74,7 @@ export async function verifyIdentityDocument(
       ],
     };
 
-    const streamingResp = await generativeModel.generateContent(request);
+    const streamingResp = await getModel().generateContent(request);
     const response = await streamingResp.response;
     const text = response.candidates[0].content.parts[0].text;
 
@@ -127,7 +132,7 @@ export async function verifySelfieMatch(
             ]
         };
 
-        const streamingResp = await generativeModel.generateContent(request);
+        const streamingResp = await getModel().generateContent(request);
         const response = await streamingResp.response;
         const text = response.candidates[0].content.parts[0].text;
         

@@ -1,11 +1,13 @@
-import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
+import { storage } from "../storage";
 
 export interface AuthUser {
-  userId: string; // Changed from number to string to match existing schema
+  id: string;
+  uid: string; // Firebase UID
   role: "agent" | "customer" | "referrer" | "admin";
   country: "ZW" | "ZA" | "JP";
   subscriptionStatus?: string;
+  email?: string;
 }
 
 declare global {
@@ -17,19 +19,10 @@ declare global {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "No token provided" });
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
   }
-
-  try {
-    const token = header.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
-    req.user = decoded;
-    next();
-  } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
+  next();
 }
 
 export function requireRole(...roles: AuthUser["role"][]) {
@@ -37,7 +30,8 @@ export function requireRole(...roles: AuthUser["role"][]) {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
-        error: "Forbidden",
+        error: "forbidden",
+        message: "Insufficient permissions",
         required: roles,
         actual: req.user.role,
       });
@@ -50,16 +44,65 @@ export function requireCountry(...countries: AuthUser["country"][]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     if (!countries.includes(req.user.country)) {
-      return res.status(403).json({ error: "Service not available in your region" });
+      return res.status(403).json({ 
+        error: "region_restricted",
+        message: "Service not available in your region" 
+      });
     }
     next();
   };
 }
 
-// Added requireFeature as it's used in common patterns
+const FEATURE_ACCESS: Record<string, string[]> = {
+  active: [
+    "accept_leads", "send_messages", "view_leads",
+    "manage_listings", "view_analytics", "update_profile",
+  ],
+  grace_period: [
+    // Soft lock — can still communicate with existing leads, not accept new ones
+    "send_messages", "view_leads", "update_profile",
+  ],
+  suspended: [
+    // Read-only access to their data only
+    "view_leads",
+  ],
+  inactive: [
+    "update_profile",
+  ],
+};
+
 export function requireFeature(feature: string) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Basic implementation - can be expanded as needed
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    // Only agents have subscription restrictions for now
+    if (req.user.role !== "agent") {
+      return next();
+    }
+
+    const user = await storage.getUser(req.user.id);
+    const status = user?.subscriptionStatus || "inactive";
+    const allowedFeatures = FEATURE_ACCESS[status] || [];
+
+    if (!allowedFeatures.includes(feature)) {
+      return res.status(403).json({
+        error: "subscription_required",
+        message: getBlockedMessage(status, feature),
+        subscriptionStatus: status,
+        upgradeUrl: `/dashboard/settings/payments`,
+      });
+    }
+
     next();
   };
+}
+
+function getBlockedMessage(status: string, feature: string): string {
+  if (status === "suspended") {
+    return "Your account is suspended due to an unpaid subscription. Reactivate to continue.";
+  }
+  if (status === "grace_period") {
+    return "Your payment is overdue. Some features are restricted until your subscription is renewed.";
+  }
+  return "This feature requires an active subscription.";
 }

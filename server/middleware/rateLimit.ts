@@ -27,7 +27,7 @@ export const authLimiter = rateLimit({
 export const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  keyGenerator: (req: any) => req.user?.userId?.toString() || req.ip || "unknown",
+  keyGenerator: (req: any) => req.user?.id?.toString() || req.ip || "unknown",
   store: new RedisStore({ sendCommand: (...args: string[]) => redis.sendCommand(args) }),
   message: { error: "AI request limit reached, wait a moment" },
 });
@@ -36,7 +36,7 @@ export const aiLimiter = rateLimit({
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  keyGenerator: (req: any) => req.user?.userId?.toString() || req.ip || "unknown",
+  keyGenerator: (req: any) => req.user?.id?.toString() || req.ip || "unknown",
   store: new RedisStore({ sendCommand: (...args: string[]) => redis.sendCommand(args) }),
   message: { error: "Upload limit reached for this hour" },
 });

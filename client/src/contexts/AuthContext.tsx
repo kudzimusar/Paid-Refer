@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { apiFetch } from "../lib/api";
 
 interface AuthUser {
   userId: string;
@@ -47,11 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchCurrentUser(t: string): Promise<AuthUser | null> {
     try {
-      const res = await fetch("/api/auth/me", {
+      return await apiFetch<AuthUser>("/api/auth/me", {
         headers: { Authorization: `Bearer ${t}` },
       });
-      if (!res.ok) return null;
-      return res.json();
     } catch {
       return null;
     }

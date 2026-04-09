@@ -4,8 +4,8 @@ import { paymentTransactions, users, userProfiles } from "../../shared/schema.ts
 import { eq } from "drizzle-orm";
 
 const paynow = new Paynow(
-  process.env.PAYNOW_INTEGRATION_ID!,
-  process.env.PAYNOW_INTEGRATION_KEY!
+  process.env.PAYNOW_INTEGRATION_ID || "dummy_id",
+  process.env.PAYNOW_INTEGRATION_KEY || "dummy_key"
 );
 
 paynow.resultUrl = `${process.env.APP_BASE_URL}/api/payments/paynow/update`;

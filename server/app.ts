@@ -7,6 +7,18 @@ import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
+// Sentry handlers — loaded dynamically only when configured
+let Sentry: any = null;
+if (process.env.SENTRY_DSN) {
+  try {
+    Sentry = await import("@sentry/node");
+    app.use(Sentry.Handlers.requestHandler());
+    app.use(Sentry.Handlers.tracingHandler());
+  } catch {
+    // @sentry/node not installed — skip
+  }
+}
+
 // ── SECURITY ──────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false, // handled by Firebase Hosting
@@ -45,7 +57,10 @@ app.use((req, res, next) => {
 app.get("/health", (req, res) => res.json({ status: "ok", ts: Date.now() }));
 
 // ── ERROR HANDLER (must be last) ─────────────────────────────────
-// Note: This should be added AFTER routes in index.ts or here if we don't use registerRoutes pattern
-// But since the user wants it here, I'll put it, but in Express error handlers must be last.
+if (Sentry) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+app.use(errorHandler);
 
 export default app;
+

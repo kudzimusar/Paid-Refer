@@ -73,6 +73,11 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "payment", "payout", "verification", "system", "market_update"
 ]);
 
+export const disputeStatusEnum = pgEnum("dispute_status", [
+  "open", "under_review", "awaiting_agent", "awaiting_customer",
+  "resolved_agent_favour", "resolved_customer_favour", "resolved_split", "closed"
+]);
+
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -111,11 +116,13 @@ export const userProfiles = pgTable("user_profiles", {
   timezone: varchar("timezone", { length: 64 }).default("Africa/Harare"),
   locale: varchar("locale", { length: 10 }).default("en-ZW"),
   fcmToken: text("fcm_token"), // Firebase Cloud Messaging
+  xp: integer("xp").default(0),
   lastActiveAt: timestamp("last_active_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Customer requests
+export const customerRequests = pgTable("customer_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerId: varchar("customer_id").references(() => users.id), // Nullable for USSD
   phoneNumber: varchar("phone_number"), // For USSD leads
@@ -329,7 +336,7 @@ export const leadIntelligence = pgTable("lead_intelligence", {
   suggestedAlternatives: jsonb("suggested_alternatives"), // Gemini budget/area suggestions
   marketContextSnapshot: jsonb("market_context_snapshot"), // market data at time of scoring
   scoredAt: timestamp("scored_at").defaultNow(),
-  modelVersion: varchar("model_version", { length: 32 }).default("gemini-1.5-pro"),
+  modelVersion: varchar("model_version", { length: 32 }).default("gemini-2.0-flash"),
 });
 
 // ── AGENT VERIFICATION ─────────────────────────────────────
@@ -501,20 +508,119 @@ export const propertyPhotoAnalysis = pgTable("property_photo_analysis", {
   analysedAt: timestamp("analysed_at").defaultNow(),
 });
 
-// Indexes for performance
-export const leadIntelligenceIdx = index("lead_intelligence_request_idx")
-  .on(leadIntelligence.customerRequestId);
+// ── EXCHANGE RATES ──────────────────────────────────────────
+export const exchangeRates = pgTable("exchange_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromCurrency: currencyEnum("from_currency").notNull(),
+  toCurrency: currencyEnum("to_currency").notNull(),
+  rate: decimal("rate", { precision: 12, scale: 6 }).notNull(),
+  source: varchar("source", { length: 32 }),
+  fetchedAt: timestamp("fetched_at").defaultNow(),
+}, (t) => ({
+  uniquePair: index("unique_pair_idx").on(t.fromCurrency, t.toCurrency), // unique index
+}));
 
-export const agentScoresIdx = index("agent_scores_agent_idx")
-  .on(agentScores.agentId);
+// ── AGENT AVAILABILITY ──────────────────────────────────────
+export const agentAvailability = pgTable("agent_availability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id).unique(),
+  timezone: varchar("timezone", { length: 64 }).default("Africa/Harare"),
+  weeklySchedule: jsonb("weekly_schedule").notNull(), // { mon: {start, end, active}, ... }
+  autoReplyOutsideHours: boolean("auto_reply_outside_hours").default(true),
+  autoReplyMessage: text("auto_reply_message"),
+  vacationMode: boolean("vacation_mode").default(false),
+  vacationUntil: timestamp("vacation_until"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
-export const workflowLogsIdx = index("workflow_logs_entity_idx")
-  .on(workflowLogs.entityType, workflowLogs.entityId);
+// ── DISPUTES ───────────────────────────────────────────────
+export const disputes = pgTable("disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerRequestId: varchar("customer_request_id").notNull().references(() => customerRequests.id),
+  raisedByUserId: varchar("raised_by_user_id").notNull().references(() => users.id),
+  againstUserId: varchar("against_user_id").notNull().references(() => users.id),
+  category: varchar("category", { length: 64 }).notNull(),
+  description: text("description").notNull(),
+  evidenceUrls: jsonb("evidence_urls").default([]),
+  status: disputeStatusEnum("status").default("open"),
+  assignedAdminId: varchar("assigned_admin_id").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  commissionHeld: boolean("commission_held").default(false),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
-export const communicationLogsIdx = index("comm_logs_user_idx")
-  .on(communicationLogs.userId, communicationLogs.sentAt);
+export const disputeMessages = pgTable("dispute_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  disputeId: varchar("dispute_id").notNull().references(() => disputes.id),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  senderRole: varchar("sender_role", { length: 16 }).notNull(),
+  message: text("message").notNull(),
+  attachmentUrls: jsonb("attachment_urls").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
-// Relations
+// ── SAVED SEARCHES ──────────────────────────────────────────
+export const savedSearches = pgTable("saved_searches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 64 }),
+  criteria: jsonb("criteria").notNull(),
+  alertChannel: commChannelEnum("alert_channel").default("push"),
+  alertFrequency: varchar("alert_frequency", { length: 16 }).default("instant"),
+  isActive: boolean("is_active").default(true),
+  lastAlertSentAt: timestamp("last_alert_sent_at"),
+  matchCount: integer("match_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ── COOKIE CONSENTS ─────────────────────────────────────────
+export const cookieConsents = pgTable("cookie_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  sessionId: varchar("session_id", { length: 64 }),
+  country: countryEnum("country").notNull(),
+  analyticsAccepted: boolean("analytics_accepted").default(false),
+  marketingAccepted: boolean("marketing_accepted").default(false),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  consentedAt: timestamp("consented_at").defaultNow(),
+});
+
+// ── FLAGGED CONTENT ─────────────────────────────────────────
+export const flaggedContent = pgTable("flagged_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentType: varchar("content_type", { length: 32 }).notNull(), // message, photo, property
+  contentId: varchar("content_id").notNull(),
+  flaggedBy: varchar("flagged_by", { length: 64 }).notNull(), // ai_moderation, user_id, admin_id
+  reason: text("reason"),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }),
+  status: varchar("status", { length: 32 }).default("pending"), // pending, reviewed, dismissed, resolved
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// NOTE: Performance indexes should be defined inside each pgTable's 3rd arg
+// (see exchangeRates above for the correct pattern).
+// The following standalone index calls were removed because drizzle-orm
+// does not support index().on() outside of a pgTable definition:
+//   - lead_intelligence_request_idx
+//   - agent_scores_agent_idx
+//   - workflow_logs_entity_idx
+//   - comm_logs_user_idx
+
+
+// ── RELATIONS ─────────────────────────────
+
+export const leadIntelligenceRelations = relations(leadIntelligence, ({ one }) => ({
+  request: one(customerRequests, {
+    fields: [leadIntelligence.customerRequestId],
+    references: [customerRequests.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   agentProfile: one(agentProfiles, {
     fields: [users.id],
@@ -544,6 +650,10 @@ export const customerRequestsRelations = relations(customerRequests, ({ one, man
     references: [users.id],
   }),
   leads: many(leads),
+  intelligence: one(leadIntelligence, {
+    fields: [customerRequests.id],
+    references: [leadIntelligence.customerRequestId],
+  }),
 }));
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -699,6 +809,197 @@ export const insertPropertyPhotoAnalysisSchema = createInsertSchema(propertyPhot
   analysedAt: true,
 });
 
+// ── NEW ADVANCED FEATURES TABLES ─────────────────────────────
+
+export const leadAuctions = pgTable("lead_auctions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerRequestId: varchar("customer_request_id").notNull().references(() => customerRequests.id),
+  status: varchar("status", { length: 32 }).default("open"),
+  openedAt: timestamp("opened_at").defaultNow(),
+  closesAt: timestamp("closes_at").notNull(), // 4 hours after opening
+  maxPitches: integer("max_pitches").default(5),
+  winningAgentId: varchar("winning_agent_id").references(() => users.id),
+  customerSelectedAt: timestamp("customer_selected_at"),
+});
+
+export const agentPitches = pgTable("agent_pitches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auctionId: varchar("auction_id").notNull().references(() => leadAuctions.id),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  pitch: text("pitch").notNull(),           // 200 word max elevator pitch
+  proposedTimeline: varchar("proposed_timeline", { length: 64 }),
+  specialOffer: varchar("special_offer", { length: 128 }),
+  trustScore: integer("trust_score"),       // snapshot at time of pitch
+  aiPitchScore: integer("ai_pitch_score"), // Gemini scores the pitch quality
+  submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
+export const tenancyRecords = pgTable("tenancy_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  propertyId: varchar("property_id").references(() => properties.id),
+  customerRequestId: varchar("customer_request_id").references(() => customerRequests.id),
+  leaseStartDate: timestamp("lease_start_date").notNull(),
+  leaseEndDate: timestamp("lease_end_date").notNull(),
+  monthlyRent: decimal("monthly_rent", { precision: 10, scale: 2 }).notNull(),
+  currency: currencyEnum("currency").notNull(),
+  renewalReminderSentAt: timestamp("renewal_reminder_sent_at"),
+  renewedAt: timestamp("renewed_at"),
+  country: countryEnum("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const backgroundChecks = pgTable("background_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checkId: varchar("check_id").notNull().unique(),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  tenantName: varchar("tenant_name").notNull(),
+  tenantIdNumber: varchar("tenant_id_number").notNull(),
+  proposedRent: decimal("proposed_rent", { precision: 12, scale: 2 }).notNull(),
+  currency: currencyEnum("currency").notNull(),
+  country: countryEnum("country").notNull(),
+  status: varchar("status", { length: 32 }).default("pending"),
+  reportUrl: text("report_url"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const collaborationRequests = pgTable("collaboration_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  initiatingAgentId: varchar("initiating_agent_id").notNull().references(() => users.id),
+  targetAgentId: varchar("target_agent_id").notNull().references(() => users.id),
+  customerRequestId: varchar("customer_request_id").notNull().references(() => customerRequests.id),
+  proposedSplit: integer("proposed_split").notNull(), // 50 = 50/50, 60 = 60/40 to initiator
+  reason: text("reason"),
+  status: varchar("status", { length: 32 }).default("pending"),
+  acceptedAt: timestamp("accepted_at"),
+  declinedAt: timestamp("declined_at"),
+  splitFinalised: boolean("split_finalised").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userAchievements = pgTable("user_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  achievementId: varchar("achievement_id", { length: 64 }).notNull(),
+  points: integer("points").notNull(),
+  awardedAt: timestamp("awarded_at").defaultNow(),
+});
+
+export const neighbourhoodProfiles = pgTable("neighbourhood_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  area: varchar("area", { length: 128 }).notNull(),
+  city: varchar("city", { length: 64 }).notNull(),
+  country: countryEnum("country").notNull(),
+  scores: jsonb("scores").notNull(), // { safety, transport, ... }
+  insights: jsonb("insights").default([]),
+  bestFor: jsonb("best_for").default([]),
+  avoidIf: jsonb("avoid_if").default([]),
+  localTips: jsonb("local_tips").default([]),
+  priceDirection: varchar("price_direction", { length: 16 }),
+  geminiSummary: text("gemini_summary"),
+  sources: jsonb("sources").default([]),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+export const competitorPrices = pgTable("competitor_prices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  source: varchar("source", { length: 32 }).notNull(),
+  propertyType: varchar("property_type", { length: 64 }).notNull(),
+  city: varchar("city", { length: 64 }).notNull(),
+  district: varchar("district", { length: 128 }),
+  price: decimal("price", { precision: 12, scale: 2 }).notNull(),
+  currency: currencyEnum("currency").notNull(),
+  bedrooms: integer("bedrooms"),
+  sizeSqm: decimal("size_sqm", { precision: 8, scale: 2 }),
+  scrapedAt: timestamp("scraped_at").defaultNow(),
+});
+
+// Zod schemas for new tables
+export const insertLeadAuctionSchema = createInsertSchema(leadAuctions).omit({ id: true, openedAt: true });
+export const insertAgentPitchSchema = createInsertSchema(agentPitches).omit({ id: true, submittedAt: true });
+export const insertTenancyRecordSchema = createInsertSchema(tenancyRecords).omit({ id: true, createdAt: true });
+export const insertBackgroundCheckSchema = createInsertSchema(backgroundChecks).omit({ id: true, createdAt: true });
+export const insertCollaborationRequestSchema = createInsertSchema(collaborationRequests).omit({ id: true, createdAt: true });
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, awardedAt: true });
+export const insertNeighbourhoodProfileSchema = createInsertSchema(neighbourhoodProfiles).omit({ id: true, lastUpdated: true });
+export const insertCompetitorPriceSchema = createInsertSchema(competitorPrices).omit({ id: true, scrapedAt: true });
+
+// Types
+export type User = typeof users.$inferSelect;
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type CustomerRequest = typeof customerRequests.$inferSelect;
+export type AgentProfile = typeof agentProfiles.$inferSelect;
+export type ReferrerProfile = typeof referrerProfiles.$inferSelect;
+export type ReferralLink = typeof referralLinks.$inferSelect;
+export type Lead = typeof leads.$inferSelect;
+export type Conversation = typeof conversations.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type Property = typeof properties.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type AgentScore = typeof agentScores.$inferSelect;
+export type LeadIntelligence = typeof leadIntelligence.$inferSelect;
+export type AgentVerification = typeof agentVerifications.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
+export type WhatsappOptIn = typeof whatsappOptIns.$inferSelect;
+export type AgentPreRegistration = typeof agentPreRegistrations.$inferSelect;
+export type Balance = typeof balances.$inferSelect;
+export type WorkflowLog = typeof workflowLogs.$inferSelect;
+export type CommunicationLog = typeof communicationLogs.$inferSelect;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type MarketSnapshot = typeof marketSnapshots.$inferSelect;
+export type PropertyPhotoAnalysis = typeof propertyPhotoAnalysis.$inferSelect;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type AgentAvailability = typeof agentAvailability.$inferSelect;
+export type Dispute = typeof disputes.$inferSelect;
+export type DisputeMessage = typeof disputeMessages.$inferSelect;
+export type SavedSearch = typeof savedSearches.$inferSelect;
+export type CookieConsent = typeof cookieConsents.$inferSelect;
+export type FlaggedContent = typeof flaggedContent.$inferSelect;
+
+export type LeadAuction = typeof leadAuctions.$inferSelect;
+export type AgentPitch = typeof agentPitches.$inferSelect;
+export type TenancyRecord = typeof tenancyRecords.$inferSelect;
+export type BackgroundCheck = typeof backgroundChecks.$inferSelect;
+export type CollaborationRequest = typeof collaborationRequests.$inferSelect;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type NeighbourhoodProfile = typeof neighbourhoodProfiles.$inferSelect;
+export type CompetitorPrice = typeof competitorPrices.$inferSelect;
+
+export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
+  id: true,
+  fetchedAt: true,
+});
+
+export const insertAgentAvailabilitySchema = createInsertSchema(agentAvailability).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertDisputeSchema = createInsertSchema(disputes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisputeMessageSchema = createInsertSchema(disputeMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSavedSearchSchema = createInsertSchema(savedSearches).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCookieConsentSchema = createInsertSchema(cookieConsents).omit({
+  id: true,
+  consentedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -722,3 +1023,9 @@ export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type AgentAvailability = typeof agentAvailability.$inferSelect;
+export type Dispute = typeof disputes.$inferSelect;
+export type DisputeMessage = typeof disputeMessages.$inferSelect;
+export type SavedSearch = typeof savedSearches.$inferSelect;
+export type CookieConsent = typeof cookieConsents.$inferSelect;

@@ -24,15 +24,17 @@ const AGENT_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
   { icon: Users, label: "Leads", href: "/dashboard/leads" },
   { icon: Building, label: "Listings", href: "/dashboard/listings" },
+  { icon: Banknote, label: "Wallet", href: "/dashboard/settings/payments" },
   { icon: MessageCircle, label: "Chat", href: "/chat" },
-  { icon: User, label: "Profile", href: "/profile" },
+
 ];
 
 const REFERRER_NAV: NavItem[] = [
   { icon: TrendingUp, label: "Hub", href: "/refer" },
   { icon: Link2, label: "Links", href: "/refer/links" },
-  { icon: Banknote, label: "Earnings", href: "/refer/payouts" },
+  { icon: Banknote, label: "Earnings", href: "/dashboard/settings/payments" },
   { icon: User, label: "Profile", href: "/profile" },
+
 ];
 
 const ADMIN_NAV: NavItem[] = [

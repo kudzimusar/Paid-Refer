@@ -12,6 +12,7 @@ export type UrgencyTag = "low" | "medium" | "high" | "premium";
 
 export interface Lead {
   id: number;
+  customerId: string;
   customerName: string;
   customerPhone: string;
   customerWhatsapp: string | null;
@@ -83,7 +84,7 @@ export function useLeads() {
       if (filters.search) params.set("search", filters.search);
       params.set("sortBy", filters.sortBy);
 
-      const res = await fetch(`/api/agents/leads?${params}`, {
+      const res = await fetch(`/api/agent/leads?${params}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const data = await res.json();
@@ -115,13 +116,14 @@ export function useLeads() {
       method: "POST",
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    if (res.ok) {
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === leadId ? { ...l, status: "in_progress" } : l
-        )
-      );
-    }
+      const data = await res.json();
+      if (res.ok) {
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.id === leadId ? { ...l, status: "in_progress", conversationId: data.conversationId } : l
+          )
+        );
+      }
     return res.ok;
   }, []);
 

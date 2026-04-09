@@ -52,10 +52,7 @@ export async function setupFirebaseAuth(app: Express) {
     }
   });
 
-  // Simple session endpoint for client to sync roles/status
-  app.get("/api/auth/me", isFirebaseAuthenticated, (req: FirebaseRequest, res) => {
-    res.json(req.user.dbUser);
-  });
+  // Role-based access control helper and other helpers remain here
 }
 
 export function isFirebaseAuthenticated(req: FirebaseRequest, res: Response, next: NextFunction) {

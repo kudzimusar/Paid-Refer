@@ -4,6 +4,8 @@ import { LeadScoreBadge } from "./LeadScoreBadge";
 import { LeadActionMenu } from "./LeadActionMenu";
 import { TimeAgo } from "../ui/TimeAgo";
 import { ExpiryCountdown } from "./ExpiryCountdown";
+import { DealPredictor } from "./DealPredictor";
+
 
 interface Props {
   lead: Lead;
@@ -111,9 +113,13 @@ export function LeadCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {lead.geminiScore !== null && (
-            <LeadScoreBadge score={lead.geminiScore} urgency={lead.urgencyTag} />
-          )}
+          <div className="flex flex-col items-end gap-1">
+            {lead.geminiScore !== null && (
+              <LeadScoreBadge score={lead.geminiScore} urgency={lead.urgencyTag} />
+            )}
+            <DealPredictor leadId={lead.id} />
+          </div>
+
           <LeadActionMenu
             lead={lead}
             onDecline={() => setShowDeclineModal(true)}

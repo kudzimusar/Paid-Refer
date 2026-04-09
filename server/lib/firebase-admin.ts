@@ -1,8 +1,12 @@
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 
-const app = admin.apps.length 
-  ? admin.app() 
-  : admin.initializeApp({
+let app: admin.app.App | null = null;
+
+try {
+  if (admin.apps?.length) {
+    app = admin.app();
+  } else if (process.env.FIREBASE_PROJECT_ID) {
+    app = admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
@@ -10,13 +14,26 @@ const app = admin.apps.length
       }),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
+  } else {
+    console.warn("⚠️  Firebase credentials not configured — Firebase features disabled.");
+  }
+} catch (err) {
+  console.warn("⚠️  Firebase init failed:", (err as Error).message);
+}
 
-export const firestore = admin.firestore();
-export const storage = admin.storage();
-export const messaging = admin.messaging();
-export const auth = admin.auth();
+// Create real or stub exports
+const noopFirestore = { settings: () => {}, collection: () => ({} as any), doc: () => ({} as any) } as any;
+
+export const firestore = app ? admin.firestore() : noopFirestore;
+export const storage = app ? admin.storage() : ({} as any);
+export const messaging = app ? admin.messaging() : ({} as any);
+export const auth = app ? admin.auth() : ({} as any);
 
 // Firestore settings — important for performance
-firestore.settings({ ignoreUndefinedProperties: true });
+if (app) {
+  firestore.settings({ ignoreUndefinedProperties: true });
+}
 
+export { admin };
 export default app;
+

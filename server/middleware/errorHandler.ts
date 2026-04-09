@@ -23,7 +23,7 @@ export function errorHandler(
     timestamp: new Date().toISOString(),
     method: req.method,
     url: req.url,
-    userId: (req as any).user?.userId,
+    userId: (req as any).user?.id,
     error: err.message,
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });

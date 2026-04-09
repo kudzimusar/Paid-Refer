@@ -6,47 +6,46 @@
 ## 1. Market Nuances & Compliance
 
 ### 🇿🇼 Zimbabwe (ZW)
-- **Primary Access**: USSD is the most reliable channel due to high data costs.
-    - **Logic**: Users dial code → Redis saves session → API matches agent → SMS sent back.
-- **Verification**: ZREBC (Real Estate Council of Zimbabwe) license format: `ZREB/YYYY/NNNN`.
-- **Currency**: Transactions are valued in USD.
+- **Primary Access**: USSD (*719#) session management via Redis.
+- **Payments**: **Paynow Integration** for local currency and USD transactions.
+- **Verification**: ZREBC license format validation (`ZREB/YYYY/NNNN`).
 
 ### 🇿🇦 South Africa (ZA)
-- **Primary Access**: Mobile PWA.
-- **Verification**: PPRA FFC (Fidelity Fund Certificate) is mandatory. must be validated annually.
-- **Compliance**: Adherence to the **Property Practitioners Act**.
-- **Currency**: ZAR (Stripe supported natively).
+- **Primary Access**: Mobile PWA with Stripe ZA.
+- **Verification**: PPRA FFC (Fidelity Fund Certificate) mandatory validation.
+- **Compliance**: Strict adherence to the Property Practitioners Act.
 
 ### 🇯🇵 Japan (JP)
-- **Primary Access**: LINE App integration.
-- **Verification**: **宅地建物取引士証** (Takuchi Tatemono Torihikishi Sho). Prefectural governor validation.
-- **Property Taxonomy**: 1K, 1LDK, 2DK, etc.
-- **Preferred Areas**: Shibuya, Shinjuku, Minato-ku, etc.
+- **Primary Access**: LINE App Messaging API integration.
+- **Verification**: 宅地建物取引士証 (Takuchi Tatemono Torihikishi Sho) OCR validation.
+- **Property Taxonomy**: Detailed parsing of 1K, 1LDK, 2DK formats.
 
-## 2. Technical Logic & AI Prompts
+## 2. Intelligence Engines & AI Logic
 
-### Gemini 1.5 Pro (Document Verification)
-- **Prompt Goal**: Extract full name, license number, and expiration date.
-- **Validation**: If current date > expiry, return `AUTHENTIC: false`.
+### Market Intelligence
+- **Market Pulse**: Scrapes and analyzes regional trends to provide agents with demand heatmaps.
+- **Deal Predictor**: Uses historical conversion data to score lead "closing probability".
+- **Neighbourhood Intelligence**: Aggregates local amenities, safety scores, and transit data via Gemini.
 
-### Gemini 1.5 Flash (Property Photos)
-- **Goal**: Reject blurry photos, bathroom-only photos (unless luxury), or photos with people.
-- **Extraction**: Identify amenities (e.g., Washing Machine, Balcony, Aircon).
+### Agent Productivity (The AI Suite)
+- **AI Ghostwriter**: Generates premium, high-conversion property descriptions from raw bullet points.
+- **Property Valuation**: Comparative Market Analysis (CMA) engine for instant price estimations.
+- **Virtual Tour Gen**: Stitches property photos into narrated video/slideshow tours.
+- **Agent Availability**: Smart scheduling logic that pauses leads when agents are offline or over-capacity.
 
-### USSD Session Management
-- **Key Store**: GCP Memorystore (Redis).
-- **Session Duration**: 300 seconds.
-- **Flow**: `welcome` -> `select_role` -> `submit_data` -> `confirmation`.
+### Trust & Safety
+- **Trust Score**: Composite metric (0-100) based on verification status, response time, and customer feedback.
+- **Content Moderation**: Gemini Flash screens all property uploads for illegal content, NSFW material, or poor quality.
+- **AI-Verification**: Multi-factor identity validation using Gemini 1.5 Pro to detect fraudulent documents.
 
-## 3. Communication & Lifecycle Automation
+## 3. FinTech & Automation
 
-### Brevo WhatsApp Workflow
-- **Interactive Buttons**: Highest leverage feature; agents accept/decline leads directly in WhatsApp (4-6x faster than email).
-- **Compliance**: Outbound first contact requires pre-approved templates (confirmed via Meta/Brevo manager).
-- **24-Hour Window**: Free-form replies are only allowed within 24 hours of a user's last message.
+### Payment Architecture
+- **Stripe Connect**: Express accounts for ZA/JP with automated transfer logic upon "Deal Closed".
+- **Paynow (ZW)**: Webhook-driven payment reconciliation for local ZIM interactions.
+- **Commission Logic**: Hierarchical payouts (Referrer -> Platform -> Tax) with instant reconciliation.
 
-### n8n Sequence (Lead Lifecycle)
-- **T+0**: Instant WhatsApp confirmation to customer.
-- **T+30min**: "Still searching" notification if no agent has accepted.
-- **T+2hr**: Offer search expansion to nearby areas + Slack alert to Admin.
-- **Conversion**: Automated commission payout triggers upon "Deal Closed" event.
+### Lifecycle Orchestration
+- **n8n Mesh**: Connects Express, Firebase, Brevo, and WhatsApp/LINE into a unified lead lifecycle.
+- **WhatsApp Interactive**: Uses Brevo buttons for T+0 lead acceptance (Success rate: 85% vs 15% traditional).
+- **Grace Periods**: Automated subscription handling with multi-day grace periods before service restriction.
