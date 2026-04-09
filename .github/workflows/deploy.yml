@@ -17,15 +17,22 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
+      - name: Create Artifact Registry Repo (if missing)
+        run: |
+          gcloud artifacts repositories create paid-refer \
+            --repository-format=docker \
+            --location=africa-south1 \
+            --description="Docker repository for Paid Refer API" --quiet || true
+
       - name: Build and push image
         run: |
           gcloud builds submit \
-            --tag gcr.io/${{ secrets.GCP_PROJECT }}/refer-api:${{ github.sha }}
+            --tag africa-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/paid-refer/api:${{ github.sha }}
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy refer-api \
-            --image gcr.io/${{ secrets.GCP_PROJECT }}/refer-api:${{ github.sha }} \
+            --image africa-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/paid-refer/api:${{ github.sha }} \
             --region africa-south1 \
             --platform managed \
             --allow-unauthenticated \
