@@ -45,3 +45,20 @@ export async function apiFetch<T>(
 
   return res.json();
 }
+
+/**
+ * Standardised API request helper for mutations and manual calls.
+ * @param method HTTP method (GET, POST, PUT, DELETE, etc.)
+ * @param url The endpoint URL
+ * @param data Optional body payload (will be stringified)
+ */
+export async function apiRequest<T = any>(
+  method: string,
+  url: string,
+  data?: any
+): Promise<T> {
+  return apiFetch<T>(url, {
+    method,
+    ...(data ? { body: JSON.stringify(data) } : {}),
+  });
+}
