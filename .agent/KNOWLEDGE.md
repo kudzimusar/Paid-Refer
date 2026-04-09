@@ -1,42 +1,52 @@
-# Refer 2.0 Knowledge Base
+> [!IMPORTANT]
+> **ALIGNMENT RULE**: Whenever a new feature is added, you MUST update **Context, Knowledge, and Skills** papers. See [GOVERNANCE.md](./GOVERNANCE.md) for details.
 
-Domain-specific knowledge and country-specific adaptations for Refer 2.0.
+# Refer 2.0 Regional Knowledge Base
 
-## 1. Regional Market & Verification Specifics
+## 1. Market Nuances & Compliance
 
-### Zimbabwe (ZW)
-- **Currency**: USD pricing is standard for real estate.
-- **Verification**: **ZREB** (Zimbabwe Real Estate Council) registration. Look for numbers like `ZREB/YYYY/NNNN`. Issuing authority: ZREBC.
-- **Comms**: USSD (Africa's Talking) is critical for feature phone reach.
-- **USSD Pattern**: Welcome -> Menu (1. Find Agent, 2. Register, 3. Refer, 4. Earnings) -> Flow-specific steps.
+### 🇿🇼 Zimbabwe (ZW)
+- **Primary Access**: USSD is the most reliable channel due to high data costs.
+    - **Logic**: Users dial code → Redis saves session → API matches agent → SMS sent back.
+- **Verification**: ZREBC (Real Estate Council of Zimbabwe) license format: `ZREB/YYYY/NNNN`.
+- **Currency**: Transactions are valued in USD.
 
-### South Africa (ZA)
-- **Currency**: ZAR (Stripe supported).
-- **Verification**: **PPRA** (Property Practitioners Regulatory Authority) FFC numbers. Mandatory annual renewal (expires Dec 31).
-- **Compliance**: POPI Act data residency.
+### 🇿🇦 South Africa (ZA)
+- **Primary Access**: Mobile PWA.
+- **Verification**: PPRA FFC (Fidelity Fund Certificate) is mandatory. must be validated annually.
+- **Compliance**: Adherence to the **Property Practitioners Act**.
+- **Currency**: ZAR (Stripe supported natively).
 
-### Japan (JP)
-- **Currency**: JPY (Stripe supported).
-- **Verification**: **宅地建物取引士証** (Takuchi Tatemono Torihikishi Sho). Prefectural governor issue (e.g., 東京都知事). Valid for 5 years.
-- **Comms**: LINE is dominant.
+### 🇯🇵 Japan (JP)
+- **Primary Access**: LINE App integration.
+- **Verification**: **宅地建物取引士証** (Takuchi Tatemono Torihikishi Sho). Prefectural governor validation.
+- **Property Taxonomy**: 1K, 1LDK, 2DK, etc.
+- **Preferred Areas**: Shibuya, Shinjuku, Minato-ku, etc.
 
-## 2. Technical Architecture Logic
+## 2. Technical Logic & AI Prompts
 
-### Piece 1: Firebase & Firestore
-- **Auth**: Phone OTP on client -> Backend ID Token verification via `firebase-admin`.
-- **Chat**: Firestore replaces WebSockets. Structure: `conversations/{id}/messages/{id}`. `typing` status stored in subcollections with 5s TTL.
-- **Storage**: `getSignedUrl` for private documents (7-day expiry); `makePublic` for property photos with auto-compression.
+### Gemini 1.5 Pro (Document Verification)
+- **Prompt Goal**: Extract full name, license number, and expiration date.
+- **Validation**: If current date > expiry, return `AUTHENTIC: false`.
 
-### Piece 2: Gemini intelligence
-- **Vision**: `gemini-1.5-pro` for document extraction (high accuracy); `gemini-1.5-flash` for property photo quality/amenities (low cost/speed).
-- **Lead Scoring**: n8n workflow uses Gemini to categorize and score incoming leads from USSD/Web.
+### Gemini 1.5 Flash (Property Photos)
+- **Goal**: Reject blurry photos, bathroom-only photos (unless luxury), or photos with people.
+- **Extraction**: Identify amenities (e.g., Washing Machine, Balcony, Aircon).
 
-### Piece 3: Stripe Connect
-- **Account Type**: `express` for agents/referrers.
-- **Logic**: Create Account -> Store ID -> Generate Onboarding Link -> Handle `account.updated` webhook.
-- **Payments**: Monthly subscriptions for agents; Payout transfers for referrers.
+### USSD Session Management
+- **Key Store**: GCP Memorystore (Redis).
+- **Session Duration**: 300 seconds.
+- **Flow**: `welcome` -> `select_role` -> `submit_data` -> `confirmation`.
 
-### Piece 4: Africa's Talking & USSD
-- **Session State**: Redis (GCP Memorystore) stores USSD navigation state with 300s TTL.
-- **Communications**: AT SMS for transactional alerts (OTP, Lead matches).
+## 3. Communication & Lifecycle Automation
 
+### Brevo WhatsApp Workflow
+- **Interactive Buttons**: Highest leverage feature; agents accept/decline leads directly in WhatsApp (4-6x faster than email).
+- **Compliance**: Outbound first contact requires pre-approved templates (confirmed via Meta/Brevo manager).
+- **24-Hour Window**: Free-form replies are only allowed within 24 hours of a user's last message.
+
+### n8n Sequence (Lead Lifecycle)
+- **T+0**: Instant WhatsApp confirmation to customer.
+- **T+30min**: "Still searching" notification if no agent has accepted.
+- **T+2hr**: Offer search expansion to nearby areas + Slack alert to Admin.
+- **Conversion**: Automated commission payout triggers upon "Deal Closed" event.

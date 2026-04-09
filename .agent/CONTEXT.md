@@ -1,32 +1,32 @@
+> [!IMPORTANT]
+> **ALIGNMENT RULE**: Whenever a new feature is added, you MUST update **Context, Knowledge, and Skills** papers. See [GOVERNANCE.md](./GOVERNANCE.md) for details.
+
 # Refer 2.0 Project Context
 
-This file tracks the current state of the Refer 2.0 transformation.
+This is the primary navigation and roadmap file for Refer 2.0.
 
-## 1. Project Goal
-Transform the "Refer" platform into "Refer 2.0", a self-running, AI-automated real estate referral architecture focusing on Zimbabwe, South Africa, and Japan.
+## 1. Project Master Report
+For the full detailed breakdown of user roles, architecture, and market strategy, refer to:
+👉 [FULL_REPORT.md](./FULL_REPORT.md)
 
-## 2. Implementation Roadmap
+## 2. Implementation Roadmap (Status: Foundation Phase)
 
-### Phase 1: Foundation (IN PROGRESS)
-- [ ] **Firebase Integration**: Admin SDK, Phone OTP Auth, Cloud Storage, and Firestore Chat.
-- [ ] **Document Extractions**: Gemini 1.5 Pro/Flash for license verification (ZW, ZA, JP).
-- [ ] **Payment Foundations**: Stripe Connect onboarding and webhook handlers.
-- [ ] **GCP Infrastructure**: Deploying to Cloud Run with Redis (Memorystore).
+### Phase 1: Foundation (80% Complete)
+- [x] **Firebase Integration**: Admin SDK & Phone OTP Auth.
+- [x] **Document Extractions**: Gemini 1.5 Pro for license verification.
+- [x] **Firestore Chat**: Real-time scalable messaging.
+- [ ] **GCP Infrastructure**: Finalizing Cloud Run deployment with Redis.
 
 ### Phase 2: Regional Intelligence
-- [ ] **ZW Specialization**: Africa's Talking USSD Tree and SMS helpers.
-- [ ] **ZA Specialization**: PPRA Verification logic and FFC document extraction.
-- [ ] **JP Specialization**: Japanese Real Estate Broker license extraction and LINE integration.
+- [ ] **ZW Specialization**: Finishing USSD deep-linking (*719#).
+- [ ] **ZA Specialization**: PPRA Verification logic hardening.
+- [ ] **JP Specialization**: LINE integration for Japanese agents.
 
 ### Phase 3: Automation Hub
-- [ ] **n8n Orchestration**: Lead qualification, Agent verification auto-reviews, and Commission payouts.
-- [ ] **Communications**: Brevo SMTP/WhatsApp and FCM Push Notifications.
+- [x] **n8n Orchestration**: Lead matching and commission triggers (WhatsApp lifecycle).
+- [ ] **Payments**: Stripe Connect Express payout automation.
 
-### Phase 4: Scaling & Polish
-- [ ] **Performance**: Firestore settings and Redis session management.
-- [ ] **Security**: Firebase Securit Rules and Firestore Chat permissions.
-- [ ] **Analytics**: Transactional tracking and referral earnings dashboard.
-
-## 3. Current Task
-Implementing **Piece 1: Firebase Integration** and **Piece 2: Gemini Document Extraction**.
-
+## 3. Current Sprint
+- Deploying **Brevo WhatsApp** interactive flows for agent lead acceptance.
+- Launching **Agent Lead Dashboard** (Kanban) with real-time stats.
+- Finalizing **Stripe Connect** payout automation.

@@ -64,6 +64,15 @@ export const onboardingStatusEnum = pgEnum('onboarding_status', [
 ]);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['inactive', 'active', 'grace_period', 'suspended']);
 
+export const propertyStatusEnum = pgEnum("property_status", [
+  "draft", "active", "rented", "sold", "archived"
+]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "new_lead", "lead_accepted", "lead_expired", "message",
+  "payment", "payout", "verification", "system", "market_update"
+]);
+
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -125,6 +134,9 @@ export const userProfiles = pgTable("user_profiles", {
   jobVisaType: varchar("job_visa_type"),
   additionalNotes: text("additional_notes"),
   status: varchar("status").default("pending"),
+  assignedAgentId: varchar("assigned_agent_id").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  conversationId: varchar("conversation_id"),
   serviceFeepaid: boolean("service_fee_paid").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -193,6 +205,7 @@ export const leads = pgTable("leads", {
   aiSummary: text("ai_summary"),
   agentNotes: text("agent_notes"),
   lastContactAt: timestamp("last_contact_at"),
+  acceptedAt: timestamp("accepted_at"),
   closedAt: timestamp("closed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -223,19 +236,39 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Properties (for agent sharing)
+// Properties table
 export const properties = pgTable("properties", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  agentId: varchar("agent_id").references(() => users.id).notNull(),
-  title: varchar("title").notNull(),
-  description: text("description"),
-  price: integer("price"),
-  propertyType: propertyTypeEnum("property_type"),
-  area: varchar("area"),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  country: countryEnum("country").notNull(),
+  city: varchar("city", { length: 64 }).notNull(),
+  district: varchar("district", { length: 128 }),
   address: text("address"),
-  features: text("features").array(),
-  imageUrls: text("image_urls").array(),
-  isAvailable: boolean("is_available").default(true),
+  title: varchar("title", { length: 128 }).notNull(),
+  description: text("description"),
+  propertyType: propertyTypeEnum("property_type").notNull(),
+  status: propertyStatusEnum("status").default("active"),
+  price: decimal("price", { precision: 12, scale: 2 }).notNull(),
+  currency: currencyEnum("currency").notNull(),
+  priceType: varchar("price_type", { length: 16 }).default("monthly"),
+  bedrooms: integer("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  sizeSqm: decimal("size_sqm", { precision: 8, scale: 2 }),
+  floor: integer("floor"),
+  totalFloors: integer("total_floors"),
+  amenities: jsonb("amenities").default([]),
+  photoUrls: jsonb("photo_urls").default([]),
+  availableFrom: timestamp("available_from"),
+  // Japan specific
+  keyMoney: decimal("key_money", { precision: 10, scale: 2 }),
+  securityDeposit: decimal("security_deposit", { precision: 10, scale: 2 }),
+  managementFee: decimal("management_fee", { precision: 10, scale: 2 }),
+  petPolicy: varchar("pet_policy", { length: 16 }),
+  // AI analysis
+  aiQualityScore: integer("ai_quality_score"),
+  aiAmenityTags: jsonb("ai_amenity_tags").default([]),
+  viewCount: integer("view_count").default(0),
+  firestoreId: varchar("firestore_id", { length: 64 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -253,16 +286,17 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Notifications
+// Notifications table
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  title: varchar("title").notNull(),
-  message: text("message").notNull(),
-  type: varchar("type"), // 'new_lead', 'message', 'payment', 'system'
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: notificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 128 }).notNull(),
+  body: text("body"),
+  data: jsonb("data"),
   isRead: boolean("is_read").default(false),
-  actionUrl: varchar("action_url"),
-  metadata: jsonb("metadata"),
+  readAt: timestamp("read_at"),
+  channel: commChannelEnum("channel").default("push"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -316,6 +350,48 @@ export const agentVerifications = pgTable("agent_verifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ── SUBSCRIPTIONS TABLE ───────────────────────────────────────────
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 64 }).unique(),
+  plan: varchar("plan", { length: 32 }).notNull(),
+  status: varchar("status", { length: 32 }).default("active"),
+  country: countryEnum("country").notNull(),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  cancelledAt: timestamp("cancelled_at"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ── REVIEWS TABLE ─────────────────────────────────────────────────
+export const reviews = pgTable("reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  customerRequestId: varchar("customer_request_id").notNull(),
+  rating: integer("rating").notNull(), // 1-5
+  comment: text("comment"),
+  isPublic: boolean("is_public").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ── WHATSAPP OPT-IN TRACKING ──────────────────────────────────────
+export const whatsappOptIns = pgTable("whatsapp_opt_ins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  phoneNumber: varchar("phone_number").notNull().unique(),
+  optedIn: boolean("opted_in").default(true),
+  optedInAt: timestamp("opted_in_at").defaultNow(),
+  optedInSource: varchar("opted_in_source", { length: 32 }),
+  optedOutAt: timestamp("opted_out_at"),
+  lastMessageAt: timestamp("last_message_at"),
+  // 24-hour window tracking
+  customerWindowOpensAt: timestamp("customer_window_opens_at"),
+});
+
 // ── AGENT PRE-REGISTRATION (USSD) ──────────────────────────
 export const agentPreRegistrations = pgTable("agent_pre_registrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -329,13 +405,15 @@ export const agentPreRegistrations = pgTable("agent_pre_registrations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// ── BALANCES ───────────────────────────────────────────────
+// Balances table
 export const balances = pgTable("balances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
   available: decimal("available", { precision: 12, scale: 2 }).default("0.00"),
   pending: decimal("pending", { precision: 12, scale: 2 }).default("0.00"),
+  lifetimeEarnings: decimal("lifetime_earnings", { precision: 12, scale: 2 }).default("0.00"),
   currency: currencyEnum("currency").default("USD"),
+  lastPayoutAt: timestamp("last_payout_at"),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
