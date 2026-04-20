@@ -143,6 +143,14 @@ export class MemStorage implements IStorage {
     return user;
   }
 
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.firebaseUid === firebaseUid);
+  }
+
+  async createUser(user: any): Promise<User> {
+    return this.upsertUser(user);
+  }
+
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
@@ -506,7 +514,7 @@ export class MemStorage implements IStorage {
   }): Promise<Property[]> {
     return Array.from(this.properties.values())
       .filter(p => p.status === "active")
-      .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      .sort((a, b) => parseFloat(String(a.price ?? "0")) - parseFloat(String(b.price ?? "0")));
   }
 
   async updateProperty(id: string, updates: Partial<Property>): Promise<Property> {

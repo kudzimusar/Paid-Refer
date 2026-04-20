@@ -38,7 +38,7 @@ export async function generateVirtualTourNarration(
     Write a 2-sentence property tour summary.
     Property: ${propertyDetails.type} in ${propertyDetails.city}
     Rooms seen: ${photos.map(p => p.roomType).join(", ")}
-    All amenities: ${[...new Set(photos.flatMap(p => p.analysedAmenities))].join(", ")}
+    All amenities: ${Array.from(new Set(photos.flatMap(p => p.analysedAmenities))).join(", ")}
     Language: ${language === "ja" ? "Japanese" : "English"}
     Return JSON: { "summary": "...", "uniqueSellingPoints": ["3 USPs"] }
   `);

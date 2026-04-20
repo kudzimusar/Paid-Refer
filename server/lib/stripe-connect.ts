@@ -156,7 +156,7 @@ export async function createAgentSubscription(
   });
 
   const invoice = subscription.latest_invoice as Stripe.Invoice;
-  const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+  const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
 
   return {
     subscriptionId: subscription.id,

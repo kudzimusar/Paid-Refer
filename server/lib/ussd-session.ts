@@ -29,7 +29,7 @@ export async function saveUSSDSession(key: string, session: USSDSession): Promis
   try {
     await redis.setEx(key, SESSION_TTL, JSON.stringify(session));
   } catch (err) {
-    console.warn("Could not save USSD session to Redis:", err.message);
+    console.warn("Could not save USSD session to Redis:", (err as Error).message);
   }
 }
 

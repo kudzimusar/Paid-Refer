@@ -76,7 +76,7 @@ export async function verifyIdentityDocument(
 
     const streamingResp = await getModel().generateContent(request);
     const response = await streamingResp.response;
-    const text = response.candidates[0].content.parts[0].text;
+    const text = response.candidates?.[0]?.content.parts[0]?.text;
 
     // Extract JSON from response (sometimes AI adds markdown blocks)
     const jsonMatch = text?.match(/\{[\s\S]*\}/);
@@ -134,8 +134,8 @@ export async function verifySelfieMatch(
 
         const streamingResp = await getModel().generateContent(request);
         const response = await streamingResp.response;
-        const text = response.candidates[0].content.parts[0].text;
-        
+        const text = response.candidates?.[0]?.content.parts[0]?.text;
+
         const jsonMatch = text?.match(/\{[\s\S]*\}/);
         if (!jsonMatch) return { match: false, confidence: 0 };
         

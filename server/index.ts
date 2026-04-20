@@ -5,17 +5,19 @@ import { errorHandler } from "./middleware/errorHandler";
 
 // Sentry is optional — only initialise if installed and configured
 if (process.env.SENTRY_DSN) {
-  try {
-    const Sentry = await import("@sentry/node");
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV,
-      tracesSampleRate: 0.1,
-    });
-    log("Sentry initialised");
-  } catch {
-    log("@sentry/node not installed – skipping Sentry");
-  }
+  (async () => {
+    try {
+      const Sentry = await import("@sentry/node");
+      Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV,
+        tracesSampleRate: 0.1,
+      });
+      log("Sentry initialised");
+    } catch {
+      log("@sentry/node not installed – skipping Sentry");
+    }
+  })();
 }
 
 (async () => {

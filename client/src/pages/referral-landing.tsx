@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import type { ReferralLink } from "@shared/schema";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ShieldCheck, Zap, MessageSquare, ArrowRight, Loader2, Award, Sparkles, MapPin } from "lucide-react";
@@ -15,7 +16,7 @@ export default function ReferralLandingPage() {
 
   const shortCode = params?.shortCode;
 
-  const { data: link, isLoading } = useQuery({
+  const { data: link, isLoading } = useQuery<ReferralLink>({
     queryKey: [`/api/referral-links/${shortCode}`],
     enabled: !!shortCode,
     // The backend route might not exist yet or redirects, 

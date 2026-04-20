@@ -92,7 +92,7 @@ function ContactStep({ onNext }: { onNext: (data: any) => void }) {
     resolver: zodResolver(contactSchema),
     defaultValues: {
       firstName: "", middleName: "", lastName: "", email: "", phone: "",
-      phoneCountryCode: "+263", preferredContactMethod: "whatsapp" as const,
+      phoneCountryCode: "+263", preferredContactMethod: "whatsapp",
       lineId: "", whatsappNumber: "",
     },
   });
@@ -433,7 +433,7 @@ export default function OnboardingPage() {
       return await apiRequest("PUT", "/api/auth/contact-details", data);
     },
     onSuccess: () => {
-      if (isCustomer) completeMutation.mutate({});
+      if (isCustomer) completeMutation.mutate();
       else setStep(2);
     },
     onError: () => toast({ title: "Error", description: "Failed to save contact details. Please try again.", variant: "destructive" }),
@@ -447,7 +447,7 @@ export default function OnboardingPage() {
       }
       return await apiRequest("POST", `/api/agent/profile`, data);
     },
-    onSuccess: () => completeMutation.mutate({}),
+    onSuccess: () => completeMutation.mutate(),
     onError: () => toast({ title: "Error", description: "Failed to save agent profile.", variant: "destructive" }),
   });
 
@@ -459,7 +459,7 @@ export default function OnboardingPage() {
       }
       return await apiRequest("POST", `/api/referrer/profile`, data);
     },
-    onSuccess: () => completeMutation.mutate({}),
+    onSuccess: () => completeMutation.mutate(),
     onError: () => toast({ title: "Error", description: "Failed to save payment info.", variant: "destructive" }),
   });
 

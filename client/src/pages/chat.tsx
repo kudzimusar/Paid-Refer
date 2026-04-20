@@ -11,7 +11,7 @@ export default function Chat() {
   const { conversationId } = useParams();
   const { user } = useAuth();
 
-  const { data: conversations = [] } = useQuery({
+  const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ['/api/conversations'],
   });
 

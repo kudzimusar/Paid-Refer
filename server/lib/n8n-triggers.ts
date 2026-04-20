@@ -25,11 +25,11 @@ async function triggerN8N(workflowPath: string, payload: any) {
 
     return await response.json();
   } catch (err) {
-    console.error(`n8n trigger failed (${workflowPath}):`, err.message);
+    console.error(`n8n trigger failed (${workflowPath}):`, (err as Error).message);
     await storage.logWorkflow({
       workflowId: workflowPath,
       status: "failed",
-      payload: { error: err.message, originalPayload: payload },
+      payload: { error: (err as Error).message, originalPayload: payload },
       timestamp: new Date(),
     });
   }

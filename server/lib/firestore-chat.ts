@@ -1,5 +1,6 @@
 import { firestore } from "./firebase-admin.ts";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import type * as admin from "firebase-admin";
 
 // Firestore collection structure:
 // conversations/{conversationId}
@@ -107,7 +108,7 @@ export async function markMessagesRead(
   // For production, we'd need to fetch messages where userId is NOT in readBy.
   // Using arrayUnion to mark as read.
   
-  unread.docs.forEach((doc) => {
+  unread.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
     batch.update(doc.ref, {
       readBy: FieldValue.arrayUnion(userId),
     });
