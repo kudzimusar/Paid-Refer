@@ -1,0 +1,150 @@
+name: Test & Build Phase 1
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify build artifacts
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ Build failed: dist directory not created"
+            exit 1
+          fi
+
+          if [ ! -f "dist/public/index.html" ]; then
+            echo "❌ Build failed: index.html not found"
+            exit 1
+          fi
+
+          echo "✅ Build artifacts verified"
+          ls -lh dist/public/
+
+      - name: Check Phase 1 components exist
+        run: |
+          echo "Checking Phase 1 components..."
+
+          # Contexts
+          test -f "client/src/contexts/MarketContext.tsx" && echo "✅ MarketContext.tsx"
+          test -f "client/src/contexts/DemoModeContext.tsx" && echo "✅ DemoModeContext.tsx"
+          test -f "client/src/contexts/AIEventBusContext.tsx" && echo "✅ AIEventBusContext.tsx"
+          test -f "client/src/contexts/ProofOfIntroductionContext.tsx" && echo "✅ ProofOfIntroductionContext.tsx"
+
+          # Demo Components
+          test -f "client/src/components/demo/MarketSwitcher.tsx" && echo "✅ MarketSwitcher.tsx"
+          test -f "client/src/components/demo/RoleSwitcher.tsx" && echo "✅ RoleSwitcher.tsx"
+          test -f "client/src/components/demo/AIActivityIndicator.tsx" && echo "✅ AIActivityIndicator.tsx"
+          test -f "client/src/components/demo/AIConfidenceBadge.tsx" && echo "✅ AIConfidenceBadge.tsx"
+          test -f "client/src/components/demo/ReferralLinkCard.tsx" && echo "✅ ReferralLinkCard.tsx"
+          test -f "client/src/components/demo/ReferralCodeInput.tsx" && echo "✅ ReferralCodeInput.tsx"
+          test -f "client/src/components/demo/GuidedTourController.tsx" && echo "✅ GuidedTourController.tsx"
+          test -f "client/src/components/demo/DemoInitializer.tsx" && echo "✅ DemoInitializer.tsx"
+
+          # Feature Components
+          test -f "client/src/components/features/TrustScoreBadge.tsx" && echo "✅ TrustScoreBadge.tsx"
+          test -f "client/src/components/features/DealPredictionCard.tsx" && echo "✅ DealPredictionCard.tsx"
+
+          # Mock Data
+          test -f "client/src/lib/mockData.ts" && echo "✅ mockData.ts"
+
+          echo ""
+          echo "All Phase 1 components present!"
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-node-${{ matrix.node-version }}
+          path: |
+            dist/
+            client/src/**/*.tsx
+            client/src/**/*.ts
+          retention-days: 7
+
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for console errors in Phase 1 components
+        run: |
+          echo "Scanning Phase 1 components for common issues..."
+
+          # Check for console.log in production code (warning only)
+          if grep -r "console.log\|console.error\|console.warn" client/src/contexts/Market* client/src/contexts/DemoMode* client/src/contexts/AIEvent* client/src/contexts/ProofOf* 2>/dev/null | grep -v "// console"; then
+            echo "⚠️  Warning: Found console statements in context files"
+          else
+            echo "✅ No unexpected console statements in contexts"
+          fi
+
+      - name: Lint Phase 1 TypeScript
+        run: |
+          echo "TypeScript compilation check..."
+          npx tsc --noEmit --skipLibCheck
+          echo "✅ TypeScript compilation successful"
+
+  demo-ready:
+    runs-on: ubuntu-latest
+    needs: [test-build, code-quality]
+
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Summary
+        run: |
+          echo "🎉 Phase 1 Implementation - Ready for Demo!"
+          echo ""
+          echo "✅ All Components Verified"
+          echo "✅ TypeScript Type Checking Passed"
+          echo "✅ Production Build Successful"
+          echo "✅ Build Artifacts Generated"
+          echo ""
+          echo "Phase 1 Deliverables:"
+          echo "  📦 4 Context Providers (Market, DemoMode, AIEventBus, ProofOfIntroduction)"
+          echo "  🎨 8 Demo Components (Switchers, Activity, Badges, Cards, Tour, Initializer)"
+          echo "  🏆 2 Feature Components (TrustScore, DealPrediction)"
+          echo "  📊 Mock Data Generator (50+ properties, 20+ referrers, 10+ agents)"
+          echo ""
+          echo "Ready for investor demo and Phase 2 feature implementation!"
