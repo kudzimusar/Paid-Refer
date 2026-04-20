@@ -58,20 +58,20 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
   const types = PROPERTY_TYPES_BY_COUNTRY[country] ?? PROPERTY_TYPES_BY_COUNTRY["ZW"];
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-[2px] z-[60] flex items-end justify-center">
       <motion.div
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        className="bg-white w-full max-w-lg rounded-t-3xl overflow-hidden"
-        style={{ maxHeight: "90vh", overflowY: "auto" }}
+        className="bg-white w-full max-w-lg rounded-t-[32px] overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.12)]"
+        style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-4 pb-2">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        <div className="flex justify-center pt-4 pb-2 shrink-0">
+          <div className="w-10 h-1.5 bg-gray-200 rounded-full" />
         </div>
 
-        <div className="px-5 pb-8">
+        <div className="px-5 pb-8 overflow-y-auto">
           <h2 className="text-lg font-extrabold text-neutral-900 mb-1">Find My Property</h2>
           <p className="text-sm text-neutral-500 mb-5">
             Step {step} of 3 — {["Property Basics", "Budget & Timing", "Requirements"][step - 1]}
@@ -245,8 +245,8 @@ export default function CustomerDashboard() {
         ) : (
           <>
             {/* Active request banner */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 relative overflow-hidden shadow-lg">
-              <Home className="absolute right-4 top-4 w-20 h-20 text-white/10" />
+            <div className="hero-gradient rounded-3xl p-6 relative overflow-hidden shadow-purple border border-white/10">
+              <Home className="absolute right-4 top-4 w-24 h-24 text-white/10" />
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

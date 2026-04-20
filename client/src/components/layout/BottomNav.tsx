@@ -45,6 +45,14 @@ const ADMIN_NAV: NavItem[] = [
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
 
+const gridColsMap: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+  5: "grid-cols-5",
+};
+
 export function BottomNav() {
   const { user } = useAuthContext();
   const [location] = useLocation();
@@ -62,7 +70,7 @@ export function BottomNav() {
 
   return (
     <nav className="bottom-nav">
-      <div className={cn("grid h-full", `grid-cols-${items.length}`)}>
+      <div className={cn("grid h-full max-w-lg mx-auto", gridColsMap[items.length] || "grid-cols-4")}>
         {items.map((item) => {
           const isActive =
             item.href === "/"

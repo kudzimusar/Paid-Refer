@@ -286,7 +286,7 @@ export default function ReferrerDashboard() {
   }, [links]);
 
   return (
-    <div className="min-h-screen bg-neutral-50 pb-24">
+    <div className="page-container bg-neutral-50/50">
       {/* ── Premium Header ── */}
       <div className="bg-white border-b border-neutral-100 sticky top-0 z-40 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
