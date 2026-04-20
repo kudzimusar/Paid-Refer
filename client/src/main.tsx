@@ -1,6 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { enableDemoMode } from "@/lib/demoMode";
+
+if (window.location.hostname.includes("github.io")) {
+  enableDemoMode();
+}
 
 createRoot(document.getElementById("root")!).render(<App />);
 

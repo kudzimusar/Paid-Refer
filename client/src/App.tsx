@@ -12,6 +12,7 @@ import { RoleSwitcher } from "@/components/demo/RoleSwitcher";
 import { AIActivityIndicator } from "@/components/demo/AIActivityIndicator";
 import { GuidedTourController } from "@/components/demo/GuidedTourController";
 import { lazy, Suspense } from "react";
+import { isDemoMode } from "@/lib/demoMode";
 
 // ── Pages ──────────────────────────────────────────────────
 import SplashPage from "@/pages/splash";
@@ -84,6 +85,11 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background">
       {/* Global Demo Components */}
+      {isDemoMode() && (
+        <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 text-sm font-medium z-50">
+          🎭 DEMO MODE - All data is mocked for presentation purposes
+        </div>
+      )}
       <RoleSwitcher />
       <AIActivityIndicator />
       <GuidedTourController />

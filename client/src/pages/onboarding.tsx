@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, ArrowRight, Mail, Phone, MessageCircle, Check, Sparkles } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { isDemoMode } from "@/lib/demoMode";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ChipSelector, StepProgress, Counter } from "@/components/ui/primitives";
@@ -425,15 +426,11 @@ export default function OnboardingPage() {
 
   const contactMutation = useMutation({
     mutationFn: async (data: any) => {
-      try {
-        return await apiRequest("PUT", "/api/auth/contact-details", data);
-      } catch (err: any) {
-        if (err.message === "Unauthorized") {
-          console.warn("Skipping backend /api/auth/contact-details due to 401 in Dev UI testing.");
-          return data; // mock success
-        }
-        throw err;
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { success: true, user: { ...data, id: "demo_user_1" } };
       }
+      return await apiRequest("PUT", "/api/auth/contact-details", data);
     },
     onSuccess: () => {
       if (isCustomer) completeMutation.mutate({});
@@ -444,12 +441,11 @@ export default function OnboardingPage() {
 
   const profileMutation = useMutation({
     mutationFn: async (data: any) => {
-      try {
-         return await apiRequest("POST", `/api/agent/profile`, data);
-      } catch (err: any) {
-        if (err.message === "Unauthorized") return data;
-        throw err;
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { success: true };
       }
+      return await apiRequest("POST", `/api/agent/profile`, data);
     },
     onSuccess: () => completeMutation.mutate({}),
     onError: () => toast({ title: "Error", description: "Failed to save agent profile.", variant: "destructive" }),
@@ -457,12 +453,11 @@ export default function OnboardingPage() {
 
   const referrerMutation = useMutation({
     mutationFn: async (data: any) => {
-       try {
-         return await apiRequest("POST", `/api/referrer/profile`, data);
-       } catch (err: any) {
-         if (err.message === "Unauthorized") return data;
-         throw err;
-       }
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { success: true };
+      }
+      return await apiRequest("POST", `/api/referrer/profile`, data);
     },
     onSuccess: () => completeMutation.mutate({}),
     onError: () => toast({ title: "Error", description: "Failed to save payment info.", variant: "destructive" }),
@@ -470,12 +465,11 @@ export default function OnboardingPage() {
 
   const completeMutation = useMutation({
     mutationFn: async () => {
-      try {
-        return await apiRequest("POST", "/api/auth/complete-onboarding", {});
-      } catch (err: any) {
-         if (err.message === "Unauthorized") return {};
-         throw err;
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { success: true };
       }
+      return await apiRequest("POST", "/api/auth/complete-onboarding", {});
     },
     onSuccess: () => setDone(true),
     onError: () => toast({ title: "Error", description: "Onboarding completion failed. Please try again.", variant: "destructive" }),
