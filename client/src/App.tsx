@@ -131,7 +131,7 @@ function AppContent() {
 
 // ── Root App ───────────────────────────────────────────────
 function App() {
-  const base = window.location.hostname.includes("github.io") ? "/Paid-Refer" : "";
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   return (
     <QueryClientProvider client={queryClient}>
