@@ -4,13 +4,18 @@ import { apiFetch } from "../lib/api";
 
 interface AuthUser {
   userId: string;
+  id?: string;
   role: "agent" | "customer" | "referrer" | "admin";
   country: "ZW" | "ZA" | "JP";
+  city?: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   onboardingStatus: string;
   subscriptionStatus?: string;
+  isVerified?: boolean;
 }
 
 interface AuthContextType {

@@ -10,13 +10,15 @@ const app = express();
 // Sentry handlers — loaded dynamically only when configured
 let Sentry: any = null;
 if (process.env.SENTRY_DSN) {
-  try {
-    Sentry = await import("@sentry/node");
-    app.use(Sentry.Handlers.requestHandler());
-    app.use(Sentry.Handlers.tracingHandler());
-  } catch {
-    // @sentry/node not installed — skip
-  }
+  (async () => {
+    try {
+      Sentry = await import("@sentry/node");
+      app.use(Sentry.Handlers.requestHandler());
+      app.use(Sentry.Handlers.tracingHandler());
+    } catch {
+      // @sentry/node not installed — skip
+    }
+  })();
 }
 
 // ── SECURITY ──────────────────────────────────────────────────────

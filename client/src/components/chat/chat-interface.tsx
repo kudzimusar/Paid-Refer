@@ -142,7 +142,7 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
       {/* Messages */}
       <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-        {messages.map((message: Message) => {
+        {(messages as Message[]).map((message: Message) => {
           const isOwn = message.senderId === user?.id;
           const messageTime = new Date(message.createdAt).toLocaleTimeString([], {
             hour: '2-digit',

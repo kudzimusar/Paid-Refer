@@ -117,7 +117,7 @@ export function LeadCard({
             {lead.geminiScore !== null && (
               <LeadScoreBadge score={lead.geminiScore} urgency={lead.urgencyTag} />
             )}
-            <DealPredictor leadId={lead.id} />
+            <DealPredictor leadId={String(lead.id)} />
           </div>
 
           <LeadActionMenu

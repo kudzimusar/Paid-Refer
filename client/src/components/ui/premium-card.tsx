@@ -28,7 +28,6 @@ export function PremiumCard({
         gradient && "bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/20",
         className
       )}
-      {...props}
     >
       {/* Subtle shine effect on hover */}
       {hover && (
