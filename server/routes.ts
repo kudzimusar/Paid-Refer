@@ -50,6 +50,7 @@ import {
   triggerReviewRequest
 } from "./lib/n8n-triggers.ts";
 import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "dummy_sk", { apiVersion: "2024-06-20" as any });
 import { uploadToFirebase } from "./lib/firebase-storage.ts";
 import { analyzeDocument } from "./lib/gemini-document.ts";
 import { dbStorage } from "./db-storage.ts";
@@ -58,16 +59,22 @@ import { triggerAgentScoringUpdate } from "./lib/agent-scoring.ts";
 import { createConversation } from "./lib/firestore-chat";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
 import { db } from "./db.ts";
-import { 
-  leads, 
-  properties, 
-  notifications, 
-  referralLinks, 
-  agentScores, 
-  paymentTransactions, 
-  balances, 
+import {
+  leads,
+  properties,
+  notifications,
+  referralLinks,
+  agentScores,
+  paymentTransactions,
+  balances,
   customerRequests,
-  reviews
+  reviews,
+  userProfiles,
+  agentProfiles,
+  conversations,
+  users,
+  agentVerifications,
+  disputes
 } from "@shared/schema.ts";
 import { type NextFunction, type Request, type Response } from "express";
 import { analyzePropertyPhoto } from "./lib/gemini-photos.ts";
@@ -78,7 +85,7 @@ import { valuatePropertyRequest } from "./lib/property-valuation";
 import { isAgentAvailable } from "./lib/agent-availability";
 import { generateTenancyAgreement } from "./lib/document-generator";
 import { trackEvent } from "./lib/analytics";
-import { exchangeRates, flaggedContent, agentAvailability, disputes, disputeMessages, savedSearches, cookieConsents } from "@shared/schema";
+import { exchangeRates, flaggedContent, agentAvailability, disputeMessages, savedSearches, cookieConsents } from "@shared/schema";
 import { computeMarketPulse } from "./lib/market-pulse";
 import { predictDealOutcome } from "./lib/deal-predictor";
 import { generateNeighbourhoodProfile } from "./lib/neighbourhood-intelligence";
@@ -400,7 +407,7 @@ Empowering local agents & referrers.
         return res.status(404).json({ message: "Transaction not found" });
       }
 
-      const pollUrl = transaction.metadata?.paynowPollUrl;
+      const pollUrl = (transaction.metadata as any)?.paynowPollUrl;
       if (!pollUrl) {
         return res.status(400).json({ message: "No poll URL found for this transaction" });
       }
@@ -459,9 +466,8 @@ Empowering local agents & referrers.
   app.post("/internal/api/update-subscription", checkInternalAuth, async (req, res) => {
     const { userId, status, stripeSubscriptionId } = req.body;
     try {
-      await storage.updateUser(userId, { 
-        subscriptionStatus: status,
-        stripeSubscriptionId 
+      await storage.updateUser(userId, {
+        subscriptionStatus: status
       });
       res.json({ success: true });
     } catch (e) {
@@ -472,13 +478,13 @@ Empowering local agents & referrers.
   app.post("/internal/api/soft-lock-agent", checkInternalAuth, async (req, res) => {
     const { agentId } = req.body;
     try {
-      await storage.updateUser(agentId, { subscriptionStatus: "payment_grace" });
+      await storage.updateUser(agentId, { subscriptionStatus: "grace_period" });
       // Notify them
       await storage.createNotification({
         userId: agentId,
         title: "Payment Overdue",
-        message: "Your subscription payment failed. Please update your details to keep receiving new leads.",
-        type: "billing",
+        body: "Your subscription payment failed. Please update your details to keep receiving new leads.",
+        type: "payment",
       });
       res.json({ success: true });
     } catch (e) {
@@ -495,7 +501,7 @@ Empowering local agents & referrers.
       
       for (const lead of activeLeads) {
         // Simple redistribution strategy: Mark as unassigned or find next best match
-        await storage.updateLead(lead.id, { agentId: null, status: "pending" });
+        await storage.updateLead(lead.id, { status: "pending" });
         // Trigger re-matching logic (this would ideally trigger another n8n webhook)
       }
       
@@ -812,9 +818,9 @@ Empowering local agents & referrers.
         await storage.createNotification({
           userId: lead.customerId,
           title: 'Agent Interested',
-          message: 'An agent has accepted your request and wants to chat!',
+          body: 'An agent has accepted your request and wants to chat!',
           type: 'message',
-          metadata: { conversationId: conversation.id }
+          data: { conversationId: conversation.id }
         });
       }
       
@@ -926,9 +932,9 @@ Empowering local agents & referrers.
       // 3. Update Property with photo URLs
       const property = await storage.getProperty(id);
       if (property) {
-        const currentUrls = property.imageUrls ? (JSON.parse(property.imageUrls as string) as string[]) : [];
-        await storage.updateProperty(id, { 
-            imageUrls: JSON.stringify([...currentUrls, ...uploadResults]) 
+        const currentUrls = property.photoUrls ? (property.photoUrls as string[]) : [];
+        await storage.updateProperty(id, {
+            photoUrls: [...currentUrls, ...uploadResults]
         });
       }
 
@@ -1165,7 +1171,7 @@ Empowering local agents & referrers.
       
       // Increment click count
       await storage.updateReferralLink(link.id, {
-        clickCount: (link.clickCount || 0) + 1
+        totalClicks: (link.totalClicks || 0) + 1
       });
       
       res.json(link);
@@ -1203,10 +1209,10 @@ Empowering local agents & referrers.
       
       // 3. Update DB Profile
       await dbStorage.updateAgentProfile(userId, {
-        isVerified: analysisResult.isVerified,
-        licenseNumber: analysisResult.licenseNumber,
+        licenseNumber: analysisResult.licenseNumber ?? undefined,
         updatedAt: new Date()
       });
+      await db.update(users).set({ isVerified: analysisResult.isVerified }).where(eq(users.id, userId));
 
       // 4. Log to internal automation workflow
       await dbStorage.logWorkflow({
@@ -1458,8 +1464,8 @@ Empowering local agents & referrers.
     const conversationId = await createConversation(
       leadId,
       req.user!.userId,
-      lead.customerId,
-      lead.country
+      lead.customerId!,
+      (lead as any).country
     );
 
     await db.update(customerRequests).set({
@@ -1504,7 +1510,7 @@ Empowering local agents & referrers.
     `);
 
     await db.update(agentScores)
-      .set({ customerRatingAvg: avgResult.rows[0].avg_rating })
+      .set({ customerRatingAvg: avgResult.rows[0].avg_rating as any })
       .where(eq(agentScores.agentId, agentId));
 
     res.status(201).json({ success: true, data: review });
@@ -1560,7 +1566,7 @@ Empowering local agents & referrers.
         return res.status(403).json({ message: "Not authorized to delete this property" });
       }
 
-      await storage.updateProperty(id, { isAvailable: false }); // Soft delete
+      await storage.updateProperty(id, { status: "archived" }); // Soft delete
       
       if (existing.firestoreId) {
         await firestore.collection("propertyListings").doc(existing.firestoreId).delete();
@@ -1742,8 +1748,8 @@ Empowering local agents & referrers.
       ] = await Promise.all([
         db.select({ count: sql<number>`count(*)` }).from(users).where(sql`last_active_at > NOW() - INTERVAL '5 min'`),
         db.select({ count: sql<number>`count(*)` }).from(customerRequests).where(eq(customerRequests.status, "in_progress")),
-        db.select({ count: sql<number>`count(*)` }).from(schema.agentVerifications).where(eq(schema.agentVerifications.verificationStatus, "pending")),
-        db.select({ count: sql<number>`count(*)` }).from(schema.disputes).where(eq(schema.disputes.status, "open")),
+        db.select({ count: sql<number>`count(*)` }).from(agentVerifications).where(eq(agentVerifications.verificationStatus, "pending" as any)),
+        db.select({ count: sql<number>`count(*)` }).from(disputes).where(eq(disputes.status, "open")),
         db.select({ count: sql<number>`count(*)` }).from(customerRequests).where(sql`created_at::date = CURRENT_DATE`),
         db.select({ count: sql<number>`count(*)` }).from(customerRequests).where(and(eq(customerRequests.status, "closed"), sql`updated_at::date = CURRENT_DATE`)),
         db.select({ sum: sql<number>`sum(amount_usd)` }).from(paymentTransactions).where(sql`created_at::date = CURRENT_DATE`)

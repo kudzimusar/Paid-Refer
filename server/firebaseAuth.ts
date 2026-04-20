@@ -37,12 +37,11 @@ export async function setupFirebaseAuth(app: Express) {
         });
       }
 
-      req.user = { 
-        ...decodedToken, 
+      req.user = {
+        ...decodedToken,
         id: dbUser.id,
         role: dbUser.role,
-        country: dbUser.country,
-        dbUser 
+        dbUser
       };
       
       next();

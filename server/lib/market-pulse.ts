@@ -27,7 +27,7 @@ export async function computeMarketPulse(
 ): Promise<MarketPulse> {
   const [searches, listings, closedToday] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(schema.customerRequests)
-      .where(and(eq(schema.customerRequests.country, country as any), eq(schema.customerRequests.city, city), eq(schema.customerRequests.status, "pending"))),
+      .where(and(eq(schema.customerRequests.country, country as any), eq(schema.customerRequests.preferredCity, city), eq(schema.customerRequests.status, "pending" as any))),
     db.select({ count: sql<number>`count(*)` }).from(schema.properties)
       .where(and(eq(schema.properties.country, country as any), eq(schema.properties.city, city), eq(schema.properties.status, "active"))),
     db.select({ count: sql<number>`count(*)` }).from(schema.customerRequests)

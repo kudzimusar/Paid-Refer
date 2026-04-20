@@ -133,7 +133,9 @@ export class MemStorage implements IStorage {
       onboardingStatus: existing?.onboardingStatus ?? 'splash',
       onboardingCompletedAt: existing?.onboardingCompletedAt ?? null,
       stripeCustomerId: existing?.stripeCustomerId ?? null,
-      stripeSubscriptionId: existing?.stripeSubscriptionId ?? null,
+      subscriptionStatus: existing?.subscriptionStatus ?? null,
+      subscriptionRenewsAt: existing?.subscriptionRenewsAt ?? null,
+      firebaseUid: existing?.firebaseUid ?? null,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -163,7 +165,7 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const created: CustomerRequest = {
       id,
-      customerId: request.customerId,
+      customerId: request.customerId ?? null,
       preferredAreas: request.preferredAreas ?? null,
       propertyType: request.propertyType ?? null,
       budgetMin: request.budgetMin ?? null,
@@ -174,6 +176,15 @@ export class MemStorage implements IStorage {
       jobVisaType: request.jobVisaType ?? null,
       additionalNotes: request.additionalNotes ?? null,
       status: "active",
+      phoneNumber: request.phoneNumber ?? null,
+      currency: request.currency ?? "USD",
+      preferredCity: request.preferredCity ?? null,
+      bedrooms: request.bedrooms ?? null,
+      country: request.country ?? "ZW",
+      source: request.source ?? "web",
+      assignedAgentId: request.assignedAgentId ?? null,
+      assignedAt: null,
+      conversationId: request.conversationId ?? null,
       serviceFeepaid: false,
       createdAt: now,
       updatedAt: now,
@@ -277,15 +288,17 @@ export class MemStorage implements IStorage {
       id,
       referrerId: link.referrerId,
       shortCode: link.shortCode,
-      requestType: link.requestType ?? null,
-      targetArea: link.targetArea ?? null,
-      apartmentType: link.apartmentType ?? null,
-      notes: link.notes ?? null,
-      clickCount: 0,
-      submissionCount: 0,
-      conversionCount: 0,
+      landingPageUrl: link.landingPageUrl ?? null,
+      qrCodeUrl: link.qrCodeUrl ?? null,
+      targetCountry: link.targetCountry ?? "ZW",
+      customSlug: link.customSlug ?? null,
+      generatedCopyEn: link.generatedCopyEn ?? null,
+      generatedCopyJa: link.generatedCopyJa ?? null,
+      totalClicks: 0,
+      totalSubmissions: 0,
+      totalConversions: 0,
+      totalEarningsUsd: "0.00",
       isActive: true,
-      expiresAt: link.expiresAt ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -328,6 +341,7 @@ export class MemStorage implements IStorage {
       aiSummary: lead.aiSummary ?? null,
       agentNotes: null,
       lastContactAt: null,
+      acceptedAt: null,
       closedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -440,15 +454,33 @@ export class MemStorage implements IStorage {
     const created: Property = {
       id,
       agentId: property.agentId,
+      country: property.country,
+      city: property.city,
+      district: property.district ?? null,
+      address: property.address ?? null,
       title: property.title,
       description: property.description ?? null,
-      propertyType: property.propertyType ?? null,
-      price: property.price ?? null,
-      area: property.area ?? null,
-      address: property.address ?? null,
-      features: property.features ?? null,
-      imageUrls: property.imageUrls ?? null,
-      isAvailable: true,
+      propertyType: property.propertyType,
+      status: "active",
+      price: property.price,
+      currency: property.currency,
+      priceType: property.priceType ?? "monthly",
+      bedrooms: property.bedrooms ?? null,
+      bathrooms: property.bathrooms ?? null,
+      sizeSqm: property.sizeSqm ?? null,
+      floor: property.floor ?? null,
+      totalFloors: property.totalFloors ?? null,
+      amenities: property.amenities ?? [],
+      photoUrls: property.photoUrls ?? [],
+      availableFrom: property.availableFrom ?? null,
+      keyMoney: property.keyMoney ?? null,
+      securityDeposit: property.securityDeposit ?? null,
+      managementFee: property.managementFee ?? null,
+      petPolicy: property.petPolicy ?? null,
+      aiQualityScore: property.aiQualityScore ?? null,
+      aiAmenityTags: property.aiAmenityTags ?? [],
+      viewCount: 0,
+      firestoreId: property.firestoreId ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -462,7 +494,7 @@ export class MemStorage implements IStorage {
 
   async getPropertiesByAgent(agentId: string): Promise<Property[]> {
     return Array.from(this.properties.values())
-      .filter(p => p.agentId === agentId && p.isAvailable)
+      .filter(p => p.agentId === agentId && p.status === "active")
       .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
@@ -473,7 +505,7 @@ export class MemStorage implements IStorage {
     maxPrice?: number 
   }): Promise<Property[]> {
     return Array.from(this.properties.values())
-      .filter(p => p.isAvailable)
+      .filter(p => p.status === "active")
       .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
   }
 
@@ -528,11 +560,12 @@ export class MemStorage implements IStorage {
       id,
       userId: notification.userId,
       title: notification.title,
-      message: notification.message,
-      type: notification.type ?? null,
-      actionUrl: notification.actionUrl ?? null,
-      metadata: notification.metadata ?? null,
+      body: notification.body ?? null,
+      type: notification.type,
+      data: notification.data ?? null,
       isRead: false,
+      readAt: null,
+      channel: notification.channel ?? null,
       createdAt: now,
     };
     this.notifications.set(id, created);

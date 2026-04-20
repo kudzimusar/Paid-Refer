@@ -184,10 +184,10 @@ async function handleLeadAcceptViaWhatsApp(agentPhone: string, leadId: string) {
   });
 
   // Notify customer
-  const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, lead.customerId!));
-  if (profile?.whatsappNumber) {
+  const [customer] = await db.select().from(users).where(eq(users.id, lead.customerId!));
+  if (customer?.whatsappNumber) {
     await sendAgentMatchedNotification(
-      profile.whatsappNumber,
+      customer.whatsappNumber,
       "there", // customer name
       agent.firstName || "An agent",
       agent.phone || "",
