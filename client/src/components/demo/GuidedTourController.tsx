@@ -112,10 +112,11 @@ export function GuidedTourController() {
   // Handle spotlight on element
   useEffect(() => {
     if (isGuidedMode && DEMO_STEPS[currentStep - 1]?.highlightSelector) {
-      const element = document.querySelector(
-        DEMO_STEPS[currentStep - 1].highlightSelector
-      );
-      setHighlightElement(element);
+      const target = DEMO_STEPS[currentStep - 1].highlightSelector;
+      if (typeof target === 'string') {
+        const element = document.querySelector(target);
+        setHighlightElement(element);
+      }
     }
   }, [currentStep, isGuidedMode]);
 

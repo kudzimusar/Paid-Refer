@@ -29,7 +29,7 @@ import SettingsPaymentsPage from "@/pages/settings-payments";
 
 
 // Lazy-load less-critical pages
-const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard"));
+const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard").then(m => ({ default: m.default || m.AgentLeadDashboard })));
 const ReferralLandingPage = lazy(() => import("@/pages/referral-landing"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 

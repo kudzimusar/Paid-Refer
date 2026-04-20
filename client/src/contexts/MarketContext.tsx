@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react";
 
-type Market = "ZW" | "ZA" | "JP";
+export type Market = "ZW" | "ZA" | "JP";
 
 export interface MarketConfig {
   market: Market;
