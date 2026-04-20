@@ -13,11 +13,10 @@ export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState(auth.currentUser);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (user) => {
+    return onAuthStateChanged(auth as any, async (user) => {
       setFirebaseUser(user);
-      if (user) {
-        // Auto-refresh token every 45 mins
-        const token = await user.getIdToken();
+      if (user && typeof (user as any).getIdToken === 'function') {
+        const token = await (user as any).getIdToken();
         localStorage.setItem("firebase_token", token);
       } else {
         localStorage.removeItem("firebase_token");
@@ -76,7 +75,7 @@ export function useAuth() {
   });
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    await firebaseSignOut(auth as any);
     localStorage.removeItem("firebase_token");
     queryClient.setQueryData(["/api/auth/user"], null);
     queryClient.invalidateQueries();
@@ -84,7 +83,8 @@ export function useAuth() {
 
   const getFreshToken = async () => {
     if (!auth.currentUser) return null;
-    const token = await auth.currentUser.getIdToken(true);
+    if (typeof (auth.currentUser as any).getIdToken !== 'function') return null;
+    const token = await (auth.currentUser as any).getIdToken(true);
     localStorage.setItem("firebase_token", token);
     return token;
   };
