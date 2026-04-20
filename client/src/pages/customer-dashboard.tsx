@@ -41,7 +41,7 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [bedrooms, setBedrooms] = useState(2);
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
-    defaultValues: { country: "ZW", budgetMin: "", budgetMax: "", notes: "" },
+    defaultValues: { country: "ZW", budgetMin: "", budgetMax: "", notes: "", preferredArea: "", propertyType: "", moveInDate: "" },
   });
 
   const createMutation = useMutation({

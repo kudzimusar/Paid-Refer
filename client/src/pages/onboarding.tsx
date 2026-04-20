@@ -89,7 +89,11 @@ const PAYMENT_METHODS = [
 function ContactStep({ onNext }: { onNext: (data: any) => void }) {
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(contactSchema),
-    defaultValues: { phoneCountryCode: "+263", preferredContactMethod: "whatsapp" },
+    defaultValues: {
+      firstName: "", middleName: "", lastName: "", email: "", phone: "",
+      phoneCountryCode: "+263", preferredContactMethod: "whatsapp" as const,
+      lineId: "", whatsappNumber: "",
+    },
   });
   const [contactCode, setContactCode] = useState("+263");
   const method = watch("preferredContactMethod");
@@ -195,7 +199,11 @@ function ContactStep({ onNext }: { onNext: (data: any) => void }) {
 function AgentProfileStep({ onNext, onBack }: { onNext: (data: any) => void; onBack: () => void }) {
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(agentSchema),
-    defaultValues: { areasCovered: [], propertyTypes: [], languagesSpoken: [], specializations: [] },
+    defaultValues: {
+      licenseNumber: "",
+      areasCovered: [] as string[], propertyTypes: [] as string[],
+      languagesSpoken: [] as string[], specializations: [] as string[],
+    },
   });
 
   return (
