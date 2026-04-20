@@ -33,13 +33,13 @@ export default function Landing() {
           We connect renters with the city's most trusted agents through verified referrals.
         </p>
         
-        <Button 
+        <Button
           onClick={handleLogin}
           className="w-full bg-primary text-white py-4 rounded-xl font-semibold shadow-lg mb-8"
         >
           Get Started
         </Button>
-      </div>
+      </motion.div>
 
       <div className="px-6 pb-20">
         <h3 className="text-lg font-semibold text-neutral-900 mb-6 flex items-center">
