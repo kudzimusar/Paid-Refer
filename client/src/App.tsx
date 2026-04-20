@@ -27,6 +27,7 @@ import VerifyAgentPage from "@/pages/verify-agent";
 import ListingsPage from "@/pages/listings";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SettingsPaymentsPage from "@/pages/settings-payments";
+import ReferrerLinksPage from "@/pages/referrer-links";
 
 
 // Lazy-load less-critical pages
@@ -120,6 +121,7 @@ function AppContent() {
 
           {/* ── Referrer ── */}
           <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
+          <ProtectedRoute path="/refer/links" roles={["referrer"]} component={ReferrerLinksPage} />
 
           {/* ── 404 ── */}
           <Route component={NotFoundPage} />

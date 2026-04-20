@@ -331,6 +331,148 @@ export function generateMockTransactions(count: number = 100): MockTransaction[]
   return transactions;
 }
 
+// ── Referrer Dashboard Mock Data ────────────────────────────
+
+export interface MockReferralLink {
+  id: string;
+  shortCode: string;
+  isActive: boolean;
+  totalClicks: number;
+  totalConversions: number;
+  totalEarningsUsd: string;
+  createdAt: string;
+  requestType: string;
+  targetArea: string;
+  targetCountry: string;
+  generatedCopyEn: string;
+}
+
+export interface MockActivity {
+  id: string;
+  type: "conversion" | "click" | "payout" | "bonus";
+  message: string;
+  amount?: number;
+  timestamp: Date;
+}
+
+export const MOCK_REFERRAL_LINKS: MockReferralLink[] = [
+  {
+    id: "link_1",
+    shortCode: "H7K2M9",
+    isActive: true,
+    totalClicks: 45,
+    totalConversions: 3,
+    totalEarningsUsd: "360.00",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    requestType: "2-Bedroom Apartment",
+    targetArea: "Borrowdale",
+    targetCountry: "ZW",
+    generatedCopyEn:
+      "🏠 Looking for a 2-bedroom in Borrowdale? I found this amazing platform that matches you with verified agents in 24hrs. Tap to get started — it's free!",
+  },
+  {
+    id: "link_2",
+    shortCode: "B3N8P1",
+    isActive: true,
+    totalClicks: 67,
+    totalConversions: 5,
+    totalEarningsUsd: "600.00",
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    requestType: "3-Bedroom House",
+    targetArea: "Mount Pleasant",
+    targetCountry: "ZW",
+    generatedCopyEn:
+      "🌿 Know anyone searching for a 3-bed home in Mount Pleasant? Share this link — they get matched with top agents instantly and you earn every time they sign!",
+  },
+  {
+    id: "link_3",
+    shortCode: "K9M4T7",
+    isActive: true,
+    totalClicks: 32,
+    totalConversions: 2,
+    totalEarningsUsd: "240.00",
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    requestType: "1-Bedroom Flat",
+    targetArea: "Avondale",
+    targetCountry: "ZW",
+    generatedCopyEn:
+      "🔑 Affordable 1-bed flats in Avondale — my link connects you with licensed agents who respond in minutes. No middleman fees!",
+  },
+  {
+    id: "link_4",
+    shortCode: "R2X6W3",
+    isActive: false,
+    totalClicks: 90,
+    totalConversions: 2,
+    totalEarningsUsd: "240.00",
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    requestType: "Townhouse",
+    targetArea: "Highlands",
+    targetCountry: "ZW",
+    generatedCopyEn:
+      "🏡 Townhouses in Highlands are moving fast. Tap this link to get matched today before they're gone!",
+  },
+  {
+    id: "link_5",
+    shortCode: "P5L1Q8",
+    isActive: true,
+    totalClicks: 28,
+    totalConversions: 1,
+    totalEarningsUsd: "120.00",
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    requestType: "Commercial Space",
+    targetArea: "Graniteside",
+    targetCountry: "ZW",
+    generatedCopyEn:
+      "📦 Need commercial space in Graniteside? Skip the estate agency queue — verified agents, fast matching, zero stress.",
+  },
+];
+
+export const MOCK_ACTIVITY: MockActivity[] = [
+  {
+    id: "act_1",
+    type: "conversion",
+    message: "Customer signed lease via link H7K2M9",
+    amount: 120.00,
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+  },
+  {
+    id: "act_2",
+    type: "click",
+    message: "3 new clicks on your Borrowdale link",
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
+  },
+  {
+    id: "act_3",
+    type: "payout",
+    message: "Payout processed to your account",
+    amount: 600.00,
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+  },
+  {
+    id: "act_4",
+    type: "conversion",
+    message: "New sign-up via link B3N8P1 — Mount Pleasant",
+    amount: 120.00,
+    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000),
+  },
+  {
+    id: "act_5",
+    type: "bonus",
+    message: "🥈 Silver tier bonus unlocked! +$50",
+    amount: 50.00,
+    timestamp: new Date(Date.now() - 72 * 60 * 60 * 1000),
+  },
+];
+
+export function getMockReferralLinks(): MockReferralLink[] {
+  return MOCK_REFERRAL_LINKS;
+}
+
+export function getMockActivity(): MockActivity[] {
+  return MOCK_ACTIVITY;
+}
+
 // Lazy-loaded singleton instances
 let cachedProperties: MockProperty[] | null = null;
 let cachedReferrers: MockReferrer[] | null = null;

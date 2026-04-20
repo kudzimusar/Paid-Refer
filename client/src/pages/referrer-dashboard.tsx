@@ -18,6 +18,8 @@ import { EmptyState, StatusBadge } from "@/components/ui/shared";
 import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
 import { useForm } from "react-hook-form";
+import { isDemoMode } from "@/lib/demoMode";
+import { getMockReferralLinks, getMockActivity, type MockActivity } from "@/lib/mockData";
 
 interface ReferralLink {
   id: string;
@@ -238,6 +240,24 @@ export default function ReferrerDashboard() {
 
   const { data: links = [], isLoading } = useQuery<ReferralLink[]>({
     queryKey: ["/api/referrer/links"],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        await new Promise(r => setTimeout(r, 600));
+        return getMockReferralLinks() as ReferralLink[];
+      }
+      return apiRequest("GET", "/api/referrer/links");
+    },
+  });
+
+  const { data: activity = [] } = useQuery<MockActivity[]>({
+    queryKey: ["referrer-activity"],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        await new Promise(r => setTimeout(r, 300));
+        return getMockActivity();
+      }
+      return apiRequest("GET", "/api/referrer/activity");
+    },
   });
 
   // Aggregate stats
@@ -355,6 +375,54 @@ export default function ReferrerDashboard() {
               </div>
            </div>
         </div>
+
+        {/* ── Activity Feed ── */}
+        {activity.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="premium-card p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Recent</p>
+                <p className="text-lg font-extrabold text-neutral-900 tracking-tight">Activity</p>
+              </div>
+              <Sparkles className="w-5 h-5 text-purple-400" />
+            </div>
+            <div className="space-y-3">
+              {activity.slice(0, 4).map((item) => {
+                const iconMap = {
+                  conversion: { bg: "bg-emerald-100", color: "text-emerald-600", emoji: "✅" },
+                  click: { bg: "bg-blue-100", color: "text-blue-600", emoji: "👆" },
+                  payout: { bg: "bg-amber-100", color: "text-amber-600", emoji: "💸" },
+                  bonus: { bg: "bg-purple-100", color: "text-purple-600", emoji: "🎁" },
+                };
+                const style = iconMap[item.type];
+                const relTime = (() => {
+                  const diff = Date.now() - new Date(item.timestamp).getTime();
+                  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                  return `${Math.floor(diff / 86400000)}d ago`;
+                })();
+                return (
+                  <div key={item.id} className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-2xl ${style.bg} flex items-center justify-center flex-shrink-0 text-base`}>
+                      {style.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-neutral-800 leading-snug truncate">{item.message}</p>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-0.5">{relTime}</p>
+                    </div>
+                    {item.amount && (
+                      <p className="text-sm font-extrabold text-emerald-600 flex-shrink-0">+${item.amount.toFixed(0)}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Referral links section ── */}
         <div className="space-y-4">
