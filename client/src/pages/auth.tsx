@@ -11,9 +11,8 @@ export default function AuthPage() {
   const { user } = useAuth();
 
   const handleAuthSuccess = (token: string) => {
-    // Token is already in localStorage via useAuth effect
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    setLocation("/onboarding");
+    setLocation("/register");
   };
 
   return (

@@ -331,11 +331,33 @@ function ReferrerPaymentStep({ onNext, onBack }: { onNext: (data: any) => void; 
 // ─── Completion Screen ──────────────────────────────────────
 function CompletionScreen({ role }: { role: string }) {
   const [, setLocation] = useLocation();
-  const { user } = useAuthContext();
+  const { login } = useAuthContext();
 
   const ROLE_DESTINATIONS: Record<string, string> = {
-    agent: "/dashboard", customer: "/search", referrer: "/refer", admin: "/admin"
+    agent: "/dashboard", customer: "/search", referrer: "/refer", admin: "/admin",
   };
+
+  const handleGoToDashboard = () => {
+    if (isDemoMode()) {
+      const demoRole = (localStorage.getItem('demo_role') ?? role) as any;
+      login('demo_token', {
+        userId: 'demo_user_12345',
+        id: 'demo_user_12345',
+        role: demoRole,
+        country: 'ZW',
+        name: `${localStorage.getItem('demo_firstName') || 'Demo'} ${localStorage.getItem('demo_lastName') || 'User'}`,
+        firstName: localStorage.getItem('demo_firstName') || 'Demo',
+        lastName: localStorage.getItem('demo_lastName') || 'User',
+        email: 'demo@refer.com',
+        phone: localStorage.getItem('demo_phone') || '+263808120135',
+        onboardingStatus: 'completed',
+        isVerified: true,
+      } as any);
+    }
+    setLocation(ROLE_DESTINATIONS[role] ?? "/register");
+  };
+
+  const firstName = localStorage.getItem('demo_firstName') || '';
 
   return (
     <motion.div
@@ -363,7 +385,7 @@ function CompletionScreen({ role }: { role: string }) {
 
       <div>
         <h2 className="text-2xl font-extrabold text-neutral-900 mb-2">
-          🎉 You're all set, {user?.firstName || ""}!
+          🎉 You're all set{firstName ? `, ${firstName}` : ""}!
         </h2>
         <p className="text-neutral-500 text-sm">
           You joined as a <span className="font-semibold text-primary capitalize">{role}</span> on Refer.
@@ -389,7 +411,7 @@ function CompletionScreen({ role }: { role: string }) {
       </div>
 
       <button
-        onClick={() => setLocation(ROLE_DESTINATIONS[role] ?? "/register")}
+        onClick={handleGoToDashboard}
         className="btn-premium w-full flex items-center justify-center gap-2"
       >
         <Sparkles className="w-4 h-4" />
@@ -467,6 +489,11 @@ export default function OnboardingPage() {
     mutationFn: async () => {
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 500));
+        localStorage.setItem('demo_onboarding_complete', 'true');
+        localStorage.setItem('demo_role', role ?? 'referrer');
+        localStorage.setItem('demo_firstName', contactData?.firstName || 'Demo');
+        localStorage.setItem('demo_lastName', contactData?.lastName || 'User');
+        localStorage.setItem('demo_phone', contactData?.phone || '+263808120135');
         return { success: true };
       }
       return await apiRequest("POST", "/api/auth/complete-onboarding", {});

@@ -37,20 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isDemoMode()) {
-      const role = (localStorage.getItem('demo_role') as AuthUser['role']) || 'referrer';
-      setUser({
-        userId: 'demo_user_12345',
-        id: 'demo_user_12345',
-        role,
-        country: 'ZW',
-        name: 'Demo User',
-        firstName: 'Demo',
-        lastName: 'User',
-        email: 'demo@refer.com',
-        phone: '+263808120135',
-        onboardingStatus: 'completed',
-        isVerified: true,
-      });
+      const complete = localStorage.getItem('demo_onboarding_complete');
+      const role = localStorage.getItem('demo_role') as AuthUser['role'] | null;
+      if (complete === 'true' && role) {
+        setUser({
+          userId: 'demo_user_12345',
+          id: 'demo_user_12345',
+          role,
+          country: 'ZW',
+          name: `${localStorage.getItem('demo_firstName') || 'Demo'} ${localStorage.getItem('demo_lastName') || 'User'}`,
+          firstName: localStorage.getItem('demo_firstName') || 'Demo',
+          lastName: localStorage.getItem('demo_lastName') || 'User',
+          email: 'demo@refer.com',
+          phone: localStorage.getItem('demo_phone') || '+263808120135',
+          onboardingStatus: 'completed',
+          isVerified: true,
+        });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
       return;
     }
@@ -90,6 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("demo_role");
+    localStorage.removeItem("demo_onboarding_complete");
+    localStorage.removeItem("demo_firstName");
+    localStorage.removeItem("demo_lastName");
+    localStorage.removeItem("demo_phone");
     if (!isDemoMode()) {
       try { getAuth().signOut().catch(console.error); } catch {}
     }

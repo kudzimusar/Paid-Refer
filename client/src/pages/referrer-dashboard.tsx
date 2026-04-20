@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import {
   Link2, TrendingUp, Share2, Copy, ExternalLink,
   Plus, X, ChevronDown, ChevronUp, Sparkles, Banknote,
-  CheckCircle2, Loader2, Trophy, Target,
+  CheckCircle2, Loader2, Trophy, Target, RotateCcw,
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -238,6 +238,17 @@ export default function ReferrerDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
 
+  const resetDemo = () => {
+    if (confirm('Reset demo and restart onboarding?')) {
+      localStorage.removeItem('demo_onboarding_complete');
+      localStorage.removeItem('demo_role');
+      localStorage.removeItem('demo_firstName');
+      localStorage.removeItem('demo_lastName');
+      localStorage.removeItem('demo_phone');
+      window.location.href = '/Paid-Refer/';
+    }
+  };
+
   const { data: links = [], isLoading } = useQuery<ReferralLink[]>({
     queryKey: ["/api/referrer/links"],
     queryFn: async () => {
@@ -280,9 +291,20 @@ export default function ReferrerDashboard() {
       <div className="bg-white border-b border-neutral-100 sticky top-0 z-40 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <NavLogo />
-          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 text-right">
-            <p className="text-xl font-extrabold text-emerald-600 leading-none">${totalEarned.toFixed(2)}</p>
-            <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Available Balance</p>
+          <div className="flex items-center gap-3">
+            {isDemoMode() && (
+              <button
+                onClick={resetDemo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Reset Demo</span>
+              </button>
+            )}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 text-right">
+              <p className="text-xl font-extrabold text-emerald-600 leading-none">${totalEarned.toFixed(2)}</p>
+              <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Available Balance</p>
+            </div>
           </div>
         </div>
       </div>
