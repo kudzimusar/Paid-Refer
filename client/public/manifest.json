@@ -1,0 +1,52 @@
+{
+  "name": "Refer - Real Estate Referrals",
+  "short_name": "Refer",
+  "description": "Connect renters with trusted agents through AI-powered matching and real-time messaging",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iNDAiIGZpbGw9IiMyNTYzRUIiLz4KPHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4PSI0NiIgeT0iNDYiPgo8cGF0aCBkPSJNMTIgMTZsNi0zLjI2VjIxSDZ2LTguMjZMMTIgMTZ6IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTIgM2w4IDQuMjZWMTJsLTggNC4yNkw0IDEyVjcuMjZMMTIgM3oiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xMiAxNmw2LTMuMjZWMjFINnYtOC4yNkwxMiAxNnoiIGZpbGw9IndoaXRlIiBmaWxsLW9wYWNpdHk9IjAuNyIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTA0IiBmaWxsPSIjMjU2M0VCIi8+Cjxzdmcgd2lkdGg9IjI2MCIgaGVpZ2h0PSIyNjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeD0iMTI2IiB5PSIxMjYiPgo8cGF0aCBkPSJNMTIgMTZsNi0zLjI2VjIxSDZ2LTguMjZMMTIgMTZ6IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTIgM2w4IDQuMjZWMTJsLTggNC4yNkw0IDEyVjcuMjZMMTIgM3oiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xMiAxNmw2LTMuMjZWMjFINnYtOC4yNkwxMiAxNnoiIGZpbGw9IndoaXRlIiBmaWxsLW9wYWNpdHk9IjAuNyIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Find Apartment",
+      "short_name": "Search",
+      "description": "Submit a new apartment request",
+      "url": "/customer-form",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDE2bDYtMy4yNlYyMUg2di04LjI2TDEyIDE2eiIgZmlsbD0iIzI1NjNFQiIvPgo8cGF0aCBkPSJNMTIgM2w4IDQuMjZWMTJsLTggNC4yNkw0IDEyVjcuMjZMMTIgM3oiIGZpbGw9IiMyNTYzRUIiLz4KPC9zdmc+",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Chat",
+      "description": "View your conversations",
+      "url": "/chat",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyYzAgNC40MTgtMy41ODIgOC04IDhzLTgtMy41ODItOC04IDMuNTgyLTggOC04IDggMy41ODIgOCA4eiIgZmlsbD0iIzEwQjk4MSIvPgo8L3N2Zz4K",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

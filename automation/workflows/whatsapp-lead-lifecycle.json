@@ -1,0 +1,235 @@
+{
+  "name": "Refer — WhatsApp Lead Lifecycle Sequence",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-lead-lifecycle",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — Lead Event",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json.event }}", "value2": "lead_created" }
+          ]
+        }
+      },
+      "id": "if-lead-created",
+      "name": "IF Lead Created",
+      "type": "n8n-nodes-base.if",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json.event }}", "value2": "no_agent_24h" }
+          ]
+        }
+      },
+      "id": "if-no-agent",
+      "name": "IF No Agent After 24h",
+      "type": "n8n-nodes-base.if",
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json.event }}", "value2": "lead_expiring" }
+          ]
+        }
+      },
+      "id": "if-expiring",
+      "name": "IF Lead Expiring",
+      "type": "n8n-nodes-base.if",
+      "position": [500, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/whatsapp/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "api-key", "value": "={{ $env.BREVO_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ receiverPhoneNumber: $json.customerPhone, type: 'interactive', interactive: { type: 'button', header: { type: 'text', text: '✅ Request received!' }, body: { text: 'Hi ' + $json.customerName + '! Your property search request in *' + $json.city + '* has been submitted. We\\'re finding your agent now.\\n\\nReference: *REF-' + $json.leadId + '*' }, footer: { text: 'Refer Property' }, action: { buttons: [{ type: 'reply', reply: { id: 'check_status', title: 'Check status' } }] } } }) }}"
+      },
+      "id": "wa-lead-confirmation",
+      "name": "WA — Lead Confirmation to Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "id": "wait-30min",
+      "name": "Wait 30 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_BASE_URL }}/internal/api/check-lead-acceptance",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customerRequestId: $('Webhook — Lead Event').first().json.leadId }) }}"
+      },
+      "id": "check-accepted-30min",
+      "name": "Check Agent Accepted (30min)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.accepted }}", "value2": false }]
+        }
+      },
+      "id": "if-not-accepted",
+      "name": "IF Not Accepted Yet",
+      "type": "n8n-nodes-base.if",
+      "position": [1550, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/whatsapp/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "api-key", "value": "={{ $env.BREVO_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ receiverPhoneNumber: $('Webhook — Lead Event').first().json.customerPhone, type: 'text', text: { body: 'Hi ' + $('Webhook — Lead Event').first().json.customerName + ', we\\'re still searching for the perfect agent for your request in ' + $('Webhook — Lead Event').first().json.city + '.\\n\\nWe expect to find one within the next hour. Thank you for your patience! 🙏' } }) }}"
+      },
+      "id": "wa-still-searching",
+      "name": "WA — Still Searching (30min)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1800, 100]
+    },
+    {
+      "parameters": {
+        "amount": 90,
+        "unit": "minutes"
+      },
+      "id": "wait-90min-more",
+      "name": "Wait 90 More Minutes",
+      "type": "n8n-nodes-base.wait",
+      "position": [2050, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_BASE_URL }}/internal/api/check-lead-acceptance",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customerRequestId: $('Webhook — Lead Event').first().json.leadId }) }}"
+      },
+      "id": "check-accepted-2hr",
+      "name": "Check Agent Accepted (2hr)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2300, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.accepted }}", "value2": false }]
+        }
+      },
+      "id": "if-still-unaccepted",
+      "name": "IF Still Unaccepted at 2hr",
+      "type": "n8n-nodes-base.if",
+      "position": [2550, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/whatsapp/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "api-key", "value": "={{ $env.BREVO_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ receiverPhoneNumber: $('Webhook — Lead Event').first().json.customerPhone, type: 'interactive', interactive: { type: 'button', body: { text: 'We\\'re experiencing high demand in ' + $('Webhook — Lead Event').first().json.city + '. Would you like to expand your search to nearby areas?' }, action: { buttons: [{ type: 'reply', reply: { id: 'expand_search', title: 'Expand search' } }, { type: 'reply', reply: { id: 'keep_waiting', title: 'Keep waiting' } }] } } }) }}"
+      },
+      "id": "wa-offer-expansion",
+      "name": "WA — Offer Search Expansion",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2800, 50]
+    },
+    {
+      "parameters": {
+        "webhookUri": "={{ $env.SLACK_ADMIN_WEBHOOK }}",
+        "text": "={{ '🚨 Unmatched Lead Alert\\nLead ID: ' + $(\\'Webhook — Lead Event\\').first().json.leadId + '\\nCity: ' + $(\\'Webhook — Lead Event\\').first().json.city + '\\nCustomer: ' + $(\\'Webhook — Lead Event\\').first().json.customerName + '\\nUnmatched for 2+ hours — consider adding agents in this area.' }}"
+      },
+      "id": "slack-unmatched-alert",
+      "name": "Slack — Unmatched Lead Alert",
+      "type": "n8n-nodes-base.slack",
+      "position": [2800, 200]
+    }
+  ],
+  "connections": {
+    "Webhook — Lead Event": {
+      "main": [[
+        { "node": "IF Lead Created", "type": "main", "index": 0 },
+        { "node": "IF No Agent After 24h", "type": "main", "index": 0 },
+        { "node": "IF Lead Expiring", "type": "main", "index": 0 }
+      ]]
+    },
+    "IF Lead Created": {
+      "main": [[{ "node": "WA — Lead Confirmation to Customer", "type": "main", "index": 0 }]]
+    },
+    "WA — Lead Confirmation to Customer": {
+      "main": [[{ "node": "Wait 30 Minutes", "type": "main", "index": 0 }]]
+    },
+    "Wait 30 Minutes": {
+      "main": [[{ "node": "Check Agent Accepted (30min)", "type": "main", "index": 0 }]]
+    },
+    "Check Agent Accepted (30min)": {
+      "main": [[{ "node": "IF Not Accepted Yet", "type": "main", "index": 0 }]]
+    },
+    "IF Not Accepted Yet": {
+      "main": [
+        [{ "node": "WA — Still Searching (30min)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "WA — Still Searching (30min)": {
+      "main": [[{ "node": "Wait 90 More Minutes", "type": "main", "index": 0 }]]
+    },
+    "Wait 90 More Minutes": {
+      "main": [[{ "node": "Check Agent Accepted (2hr)", "type": "main", "index": 0 }]]
+    },
+    "Check Agent Accepted (2hr)": {
+      "main": [[{ "node": "IF Still Unaccepted at 2hr", "type": "main", "index": 0 }]]
+    },
+    "IF Still Unaccepted at 2hr": {
+      "main": [
+        [
+          { "node": "WA — Offer Search Expansion", "type": "main", "index": 0 },
+          { "node": "Slack — Unmatched Lead Alert", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    }
+  }
+}
