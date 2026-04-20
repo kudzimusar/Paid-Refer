@@ -1000,32 +1000,15 @@ export const insertCookieConsentSchema = createInsertSchema(cookieConsents).omit
   consentedAt: true,
 });
 
-// Types
+// Insert types
 export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
-export type CustomerRequest = typeof customerRequests.$inferSelect;
 export type InsertCustomerRequest = z.infer<typeof insertCustomerRequestSchema>;
-export type AgentProfile = typeof agentProfiles.$inferSelect;
 export type InsertAgentProfile = z.infer<typeof insertAgentProfileSchema>;
-export type ReferrerProfile = typeof referrerProfiles.$inferSelect;
 export type InsertReferrerProfile = z.infer<typeof insertReferrerProfileSchema>;
-export type ReferralLink = typeof referralLinks.$inferSelect;
 export type InsertReferralLink = z.infer<typeof insertReferralLinkSchema>;
-export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
-export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
-export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
-export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
-export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-export type ExchangeRate = typeof exchangeRates.$inferSelect;
-export type AgentAvailability = typeof agentAvailability.$inferSelect;
-export type Dispute = typeof disputes.$inferSelect;
-export type DisputeMessage = typeof disputeMessages.$inferSelect;
-export type SavedSearch = typeof savedSearches.$inferSelect;
-export type CookieConsent = typeof cookieConsents.$inferSelect;
