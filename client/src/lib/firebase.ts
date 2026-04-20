@@ -1,37 +1,49 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
-
-const isDemo = typeof window !== 'undefined' && (window.location.hostname.includes("github.io") || window.location.search.includes("demo=true"));
+import { getMessaging, isSupported } from "firebase/messaging";
+import { isDemoMode } from './demoMode';
+import { createMockAuth, createMockApp } from './firebaseMock';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "demo.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-project",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "demo.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:12345:web:abcde",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = (!firebaseConfig.apiKey || firebaseConfig.apiKey === "demo-key") && isDemo 
-  ? { name: "[DEFAULT]", options: firebaseConfig } as any
-  : initializeApp(firebaseConfig);
+let app: FirebaseApp | ReturnType<typeof createMockApp>;
+let auth: Auth | ReturnType<typeof createMockAuth>;
 
-export const auth = isDemo ? { currentUser: null } as any : getAuth(app);
-export const db = isDemo ? {} as any : getFirestore(app);
-export const storage = isDemo ? {} as any : getStorage(app);
+if (isDemoMode()) {
+  console.log('🎭 Demo Mode: Using mock Firebase');
+  app = createMockApp() as any;
+  auth = createMockAuth() as any;
+} else {
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app as FirebaseApp);
+}
 
-// FCM Setup
+const storage = isDemoMode() ? null : getStorage(app as FirebaseApp);
+
+let messaging: any = null;
+if (!isDemoMode()) {
+  isSupported().then(supported => {
+    if (supported) messaging = getMessaging(app as FirebaseApp);
+  }).catch(() => {});
+}
+
 export const requestNotificationPermission = async () => {
+  if (isDemoMode()) return null;
   try {
+    const { getToken, getMessaging: gm } = await import("firebase/messaging");
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      const token = await getToken(getMessaging(app), {
+      return await getToken(gm(app as FirebaseApp), {
         vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
       });
-      return token;
     }
   } catch (err) {
     console.error("FCM Permission failed:", err);
@@ -39,4 +51,5 @@ export const requestNotificationPermission = async () => {
   return null;
 };
 
+export { app, auth, storage, messaging };
 export default app;

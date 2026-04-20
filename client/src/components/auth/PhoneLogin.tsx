@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
-import { 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber, 
-  ConfirmationResult 
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult
 } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { isDemoMode } from "@/lib/demoMode";
 
 export default function PhoneLogin({ onAuthSuccess }: { onAuthSuccess: (token: string) => void }) {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -20,13 +21,23 @@ export default function PhoneLogin({ onAuthSuccess }: { onAuthSuccess: (token: s
   const { toast } = useToast();
 
   useEffect(() => {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (isDemoMode()) return;
+    window.recaptchaVerifier = new RecaptchaVerifier(auth as any, 'recaptcha-container', {
       'size': 'invisible',
       'callback': () => {}
     });
   }, []);
 
   const handleSendCode = async () => {
+    if (isDemoMode()) {
+      setIsLoading(true);
+      await new Promise(r => setTimeout(r, 600));
+      setStep("code");
+      setIsLoading(false);
+      toast({ title: "Demo Code Sent", description: "Use any 6-digit code to continue." });
+      return;
+    }
+
     if (!phoneNumber || phoneNumber.length < 10) {
       toast({
         title: "Invalid Phone Number",
@@ -39,20 +50,13 @@ export default function PhoneLogin({ onAuthSuccess }: { onAuthSuccess: (token: s
     setIsLoading(true);
     try {
       const appVerifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      const result = await signInWithPhoneNumber(auth as any, phoneNumber, appVerifier);
       setConfirmationResult(result);
       setStep("code");
-      toast({
-        title: "Code Sent",
-        description: "A 6-digit verification code has been sent to your phone.",
-      });
+      toast({ title: "Code Sent", description: "A 6-digit verification code has been sent to your phone." });
     } catch (error: any) {
       console.error("SMS Error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification code. Please try again.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message || "Failed to send verification code.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -60,11 +64,15 @@ export default function PhoneLogin({ onAuthSuccess }: { onAuthSuccess: (token: s
 
   const handleVerifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
-      toast({
-        title: "Invalid Code",
-        description: "Please enter the 6-digit code sent to your phone.",
-        variant: "destructive"
-      });
+      toast({ title: "Invalid Code", description: "Please enter a 6-digit code.", variant: "destructive" });
+      return;
+    }
+
+    if (isDemoMode()) {
+      setIsLoading(true);
+      await new Promise(r => setTimeout(r, 600));
+      onAuthSuccess('demo_token');
+      setIsLoading(false);
       return;
     }
 
@@ -76,11 +84,7 @@ export default function PhoneLogin({ onAuthSuccess }: { onAuthSuccess: (token: s
       onAuthSuccess(idToken);
     } catch (error: any) {
       console.error("Verification Error:", error);
-      toast({
-        title: "Verification Failed",
-        description: "The code you entered is invalid or has expired.",
-        variant: "destructive"
-      });
+      toast({ title: "Verification Failed", description: "The code you entered is invalid or has expired.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

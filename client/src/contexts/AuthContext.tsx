@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { getAuth } from "firebase/auth";
 import { apiFetch } from "../lib/api";
+import { isDemoMode } from "../lib/demoMode";
 
 interface AuthUser {
   userId: string;
@@ -35,12 +36,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      const role = (localStorage.getItem('demo_role') as AuthUser['role']) || 'referrer';
+      setUser({
+        userId: 'demo_user_12345',
+        id: 'demo_user_12345',
+        role,
+        country: 'ZW',
+        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
+        email: 'demo@refer.com',
+        phone: '+263808120135',
+        onboardingStatus: 'completed',
+        isVerified: true,
+      });
+      setLoading(false);
+      return;
+    }
+
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
       fetchCurrentUser(storedToken).then((u) => {
-        if (u) { 
-          setUser(u); 
-          setToken(storedToken); 
+        if (u) {
+          setUser(u);
+          setToken(storedToken);
         } else {
           localStorage.removeItem("token");
         }
@@ -69,9 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function logout() {
     localStorage.removeItem("token");
-    const auth = getAuth();
-    if (auth) {
-      auth.signOut().catch(console.error);
+    localStorage.removeItem("demo_role");
+    if (!isDemoMode()) {
+      try { getAuth().signOut().catch(console.error); } catch {}
     }
     setToken(null);
     setUser(null);
