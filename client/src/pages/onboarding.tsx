@@ -94,17 +94,8 @@ function ContactStep({ onNext }: { onNext: (data: any) => void }) {
   const [contactCode, setContactCode] = useState("+263");
   const method = watch("preferredContactMethod");
 
-  const onSubmit = (data: any) => {
-    console.log("Form passed validation! Data:", data);
-    onNext(data);
-  };
-
-  const onInvalid = (errors: any) => {
-    console.log("Validation Failed:", errors);
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-5">
+    <form onSubmit={handleSubmit(onNext)} className="space-y-5">
       {/* Name row */}
       <div className="grid grid-cols-2 gap-3">
         <div>
