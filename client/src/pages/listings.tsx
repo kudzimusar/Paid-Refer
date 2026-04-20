@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap } from "lucide-react";
+import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
+import { VirtualTour } from "@/components/properties/VirtualTour";
+import { isDemoMode } from "@/lib/demoMode";
 
 interface Property {
   id: string;
@@ -29,8 +31,21 @@ export default function ListingsPage() {
   const qc = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
 
+  const DEMO_PROPERTIES: Property[] = [
+    { id: "p1", title: "Luxury 2-Bed in Borrowdale", propertyType: "Flat", city: "Harare", district: "Borrowdale", price: "850", currency: "USD", status: "active", photoUrls: ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800"], aiQualityScore: 94, bedrooms: 2, sizeSqm: "85" },
+    { id: "p2", title: "Spacious Family Home", propertyType: "House", city: "Harare", district: "Mount Pleasant", price: "1200", currency: "USD", status: "active", photoUrls: ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"], aiQualityScore: 87, bedrooms: 3, sizeSqm: "140" },
+    { id: "p3", title: "Modern Studio — CBD", propertyType: "Studio", city: "Harare", district: "Avondale", price: "550", currency: "USD", status: "active", photoUrls: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"], aiQualityScore: 79, bedrooms: 1, sizeSqm: "42" },
+  ];
+
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["/api/agent/properties"],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        await new Promise(r => setTimeout(r, 500));
+        return DEMO_PROPERTIES;
+      }
+      return apiRequest("GET", "/api/agent/properties");
+    },
   });
 
   const deleteMutation = useMutation({
@@ -126,7 +141,15 @@ export default function ListingsPage() {
   );
 }
 
+const TOUR_SLIDES = [
+  { photoUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200", narration: "Welcome to the spacious open-plan living area. Notice the high ceilings and abundant natural light.", displayDuration: 5000 },
+  { photoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200", narration: "The kitchen features modern appliances with granite countertops — a chef's dream.", displayDuration: 5000 },
+  { photoUrl: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=1200", narration: "The master bedroom offers peaceful garden views with an en-suite bathroom.", displayDuration: 5000 },
+  { photoUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200", narration: "A luxurious bathroom with rainfall shower and soaking tub.", displayDuration: 5000 },
+];
+
 function PropertyCard({ property, onDelete }: { property: Property; onDelete: () => void }) {
+  const [showTour, setShowTour] = useState(false);
   const score = property.aiQualityScore || 0;
   const scoreColor = score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500";
 
@@ -201,20 +224,62 @@ function PropertyCard({ property, onDelete }: { property: Property; onDelete: ()
           </div>
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-neutral-100">
-          <button className="flex-1 h-9 flex items-center justify-center gap-2 rounded-xl text-neutral-600 font-bold text-xs hover:bg-neutral-50 transition-colors">
+        {/* Feature 3: Virtual Tour button */}
+        <button
+          onClick={() => setShowTour(true)}
+          className="w-full h-9 flex items-center justify-center gap-2 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs hover:bg-indigo-100 transition-colors border border-indigo-100"
+        >
+          <Play className="w-3.5 h-3.5" />
+          AI Virtual Tour
+        </button>
+
+        <div className="flex gap-2">
+          <button className="flex-1 h-9 flex items-center justify-center gap-2 rounded-xl text-neutral-600 font-bold text-xs hover:bg-neutral-50 transition-colors border border-neutral-100">
             <Edit2 className="w-3.5 h-3.5" />
             Edit
           </button>
-          <button 
+          <button
             onClick={onDelete}
-            className="flex-1 h-9 flex items-center justify-center gap-2 rounded-xl text-red-500 font-bold text-xs hover:bg-red-50 transition-colors"
+            className="flex-1 h-9 flex items-center justify-center gap-2 rounded-xl text-red-500 font-bold text-xs hover:bg-red-50 transition-colors border border-red-50"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Delete
           </button>
         </div>
       </div>
+
+      {/* Virtual Tour modal */}
+      <AnimatePresence>
+        {showTour && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={() => setShowTour(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <VirtualTour
+                slides={TOUR_SLIDES}
+                propertyTitle={property.title}
+                onComplete={() => setShowTour(false)}
+              />
+              <button
+                onClick={() => setShowTour(false)}
+                className="mt-4 w-full h-12 bg-white/10 text-white font-bold rounded-2xl border border-white/20 hover:bg-white/20 transition-colors"
+              >
+                Close Tour
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -16,6 +16,13 @@ import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
 import { Link } from "wouter";
 import { MarketPulseCard } from "@/components/dashboard/MarketPulseCard";
+import { TrustScoreBadge } from "@/components/features/TrustScoreBadge";
+import { DealPredictionCard } from "@/components/features/DealPredictionCard";
+import { LeadIntelligence } from "@/components/features/LeadIntelligence";
+import { CompetitionRadar } from "@/components/features/CompetitionRadar";
+import { LeaseRenewalPipeline } from "@/components/features/LeaseRenewalPipeline";
+import { isDemoMode } from "@/lib/demoMode";
+import { getMockAgentLeads } from "@/lib/mockData";
 
 
 interface Lead {
@@ -134,13 +141,25 @@ export default function AgentDashboard() {
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [showPrediction, setShowPrediction] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/agent/leads"],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        await new Promise(r => setTimeout(r, 700));
+        return getMockAgentLeads() as Lead[];
+      }
+      return apiRequest("GET", "/api/agent/leads");
+    },
   });
 
   const { data: notifications = [] } = useQuery<any[]>({
     queryKey: ["/api/notifications"],
+    queryFn: async () => {
+      if (isDemoMode()) return [];
+      return apiRequest("GET", "/api/notifications");
+    },
   });
 
   const acceptMutation = useMutation({
@@ -255,20 +274,46 @@ export default function AgentDashboard() {
               )}
             </AnimatePresence>
 
-            {/* ── Market Intelligence Pulse ── */}
+            {/* ── Feature 1: Trust Score ── */}
+            {!isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="premium-card p-5"
+              >
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-3">Your Reputation</p>
+                <TrustScoreBadge score={842} name={`${user?.firstName ?? "Agent"} ${user?.lastName ?? ""}`} />
+              </motion.div>
+            )}
+
+            {/* ── Feature 2: Market Intelligence Pulse ── */}
             {!isLoading && user && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="pt-2"
+                transition={{ delay: 0.15 }}
               >
-                <MarketPulseCard 
-                  country={user.country || "ZW"} 
-                  city={user.city || "Harare"} 
+                <MarketPulseCard
+                  country={user.country || "ZW"}
+                  city={user.city || "Harare"}
                 />
               </motion.div>
             )}
+
+            {/* ── Feature 3: Lead Intelligence ── */}
+            {!isLoading && (
+              <LeadIntelligence
+                totalLeads={leads.length || 7}
+                hotLeads={newLeads.length || 2}
+                warmLeads={activeLeads.length || 3}
+                coldLeads={Math.max(0, (leads.length || 7) - (newLeads.length || 2) - (activeLeads.length || 3))}
+                avgBudgetMatch={84}
+                predictedClosingsThisWeek={2}
+              />
+            )}
+
+            {/* ── Feature 5: Competition Radar ── */}
+            {!isLoading && <CompetitionRadar />}
 
             {/* ── Stats bar ── */}
 
@@ -325,14 +370,42 @@ export default function AgentDashboard() {
               ) : newLeads.length > 0 ? (
                 <div className="space-y-3">
                   <AnimatePresence>
-                    {newLeads.slice(0, 3).map((lead) => (
-                      <PriorityLeadCard
-                        key={lead.id}
-                        lead={lead}
-                        onAccept={(id) => acceptMutation.mutate(id)}
-                        onDecline={(id) => declineMutation.mutate(id)}
-                        accepting={acceptingId === lead.id && acceptMutation.isPending}
-                      />
+                    {newLeads.slice(0, 3).map((lead, i) => (
+                      <div key={lead.id}>
+                        <PriorityLeadCard
+                          lead={lead}
+                          onAccept={(id) => acceptMutation.mutate(id)}
+                          onDecline={(id) => declineMutation.mutate(id)}
+                          accepting={acceptingId === lead.id && acceptMutation.isPending}
+                        />
+                        {/* Feature 4: Deal Prediction on top lead */}
+                        {i === 0 && (
+                          <div className="mt-2">
+                            <button
+                              onClick={() => setShowPrediction(p => !p)}
+                              className="w-full text-xs font-bold text-purple-600 flex items-center justify-center gap-2 py-2 hover:opacity-80 transition-opacity"
+                            >
+                              🔮 {showPrediction ? "Hide" : "Show"} AI Deal Prediction
+                            </button>
+                            <AnimatePresence>
+                              {showPrediction && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-1">
+                                    <DealPredictionCard
+                                      closingProbability={Math.round((lead.matchScore ?? 0.78) * 100)}
+                                    />
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </AnimatePresence>
                 </div>
@@ -374,6 +447,8 @@ export default function AgentDashboard() {
                 </div>
               </div>
             )}
+            {/* ── Feature 6: Lease Renewal Pipeline ── */}
+            <LeaseRenewalPipeline />
           </div>
         </>
       )}

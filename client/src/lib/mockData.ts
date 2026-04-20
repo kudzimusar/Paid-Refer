@@ -465,6 +465,81 @@ export const MOCK_ACTIVITY: MockActivity[] = [
   },
 ];
 
+// ── Agent Dashboard Mock Data ────────────────────────────────
+
+export interface MockLead {
+  id: string;
+  status: string;
+  customerName: string;
+  propertyType: string;
+  preferredArea: string;
+  budgetMin: string;
+  budgetMax: string;
+  matchScore: number;
+  aiSummary: string;
+  createdAt: string;
+  conversationId: string | null;
+}
+
+export const MOCK_AGENT_LEADS: MockLead[] = [
+  {
+    id: "lead_1",
+    status: "pending",
+    customerName: "Chipo Ndlovu",
+    propertyType: "2-Bedroom Flat",
+    preferredArea: "Borrowdale",
+    budgetMin: "700",
+    budgetMax: "900",
+    matchScore: 0.91,
+    aiSummary: "Urgent move — pre-approved financing, pet-friendly required. High close probability.",
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    conversationId: null,
+  },
+  {
+    id: "lead_2",
+    status: "pending",
+    customerName: "Tapiwa Moyo",
+    propertyType: "3-Bedroom House",
+    preferredArea: "Mount Pleasant",
+    budgetMin: "1000",
+    budgetMax: "1400",
+    matchScore: 0.78,
+    aiSummary: "Family of 4, needs garden and garage. Viewing 3 options next week.",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    conversationId: null,
+  },
+  {
+    id: "lead_3",
+    status: "contacted",
+    customerName: "Rudo Chikwamba",
+    propertyType: "1-Bedroom Studio",
+    preferredArea: "Avondale",
+    budgetMin: "400",
+    budgetMax: "600",
+    matchScore: 0.84,
+    aiSummary: "Student, flexible on move date, wants furnished. Budget match is strong.",
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    conversationId: "conv_1",
+  },
+  {
+    id: "lead_4",
+    status: "in_progress",
+    customerName: "Linda Matsumoto",
+    propertyType: "Townhouse",
+    preferredArea: "Highlands",
+    budgetMin: "1200",
+    budgetMax: "1800",
+    matchScore: 0.69,
+    aiSummary: "Expatriate relocation, 2-year lease preferred. Company paying rent.",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    conversationId: "conv_2",
+  },
+];
+
+export function getMockAgentLeads(): MockLead[] {
+  return MOCK_AGENT_LEADS;
+}
+
 export function getMockReferralLinks(): MockReferralLink[] {
   return MOCK_REFERRAL_LINKS;
 }
