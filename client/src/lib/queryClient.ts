@@ -16,11 +16,49 @@ export const queryClient = new QueryClient({
   },
 });
 
+import { isDemoMode } from "./demoMode";
+import { getMockAgentLeads } from "./mockData";
+
 // Standardised fetch wrapper
 export async function apiFetch<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
+  // Demo Mode Interceptor
+  if (isDemoMode()) {
+    console.log(`[Demo Mode] Intercepting ${options.method || 'GET'} ${url}`);
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    if (url === "/api/customer/request") {
+      return { success: true, id: "mock_request_" + Math.random().toString(36).substr(2, 9) } as any;
+    }
+    
+    if (url === "/api/customer/leads") {
+      return getMockAgentLeads() as any;
+    }
+
+    if (url === "/api/conversations") {
+      return [
+        { id: "conv_1", leadId: "lead_3", customerId: "demo_user_12345", agentId: "agent_1", isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: "conv_2", leadId: "lead_4", customerId: "demo_user_12345", agentId: "agent_2", isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      ] as any;
+    }
+
+    if (url.includes("/messages")) {
+      return [
+        { id: "m1", conversationId: "conv_1", senderId: "agent_1", messageType: "text", content: "Hi! I've found a perfect 1-bedroom apartment in Avondale that matches your criteria. Would you like to schedule a viewing?", createdAt: new Date().toISOString(), isRead: true },
+        { id: "m2", conversationId: "conv_1", senderId: "demo_user_12345", messageType: "text", content: "Yes, please! Is it available this weekend?", createdAt: new Date().toISOString(), isRead: true }
+      ] as any;
+    }
+
+    // Default mock response for other endpoints to prevent 404 crashes
+    if (url.startsWith("/api/")) {
+      return { success: true, data: [] } as any;
+    }
+  }
+
   const token = localStorage.getItem("token");
 
   const res = await fetch(url, {

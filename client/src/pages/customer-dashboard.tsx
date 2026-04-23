@@ -35,6 +35,7 @@ const AMENITIES = [
 
 function RequestForm({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
+  const { user } = useAuthContext();
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
   const [country, setCountry] = useState("ZW");
@@ -45,13 +46,33 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/customer/request", { ...data, amenities }),
+    mutationFn: (data: any) => {
+      const payload = {
+        ...data,
+        customerId: user?.id,
+        budgetMin: data.budgetMin ? parseInt(data.budgetMin) : 0,
+        budgetMax: data.budgetMax ? parseInt(data.budgetMax) : 0,
+        preferredCity: data.preferredArea,
+        mustHaveFeatures: amenities,
+        additionalNotes: data.notes,
+        bedrooms: String(bedrooms),
+        country: country,
+        source: "web"
+      };
+      
+      // Clean up extra fields
+      delete (payload as any).preferredArea;
+      delete (payload as any).amenities;
+      delete (payload as any).notes;
+
+      return apiRequest("POST", "/api/customer/request", payload);
+    },
     onSuccess: () => {
       toast({ title: "Request submitted! 🎉", description: "We're matching you with verified agents now." });
       qc.invalidateQueries({ queryKey: ["/api/customer/leads"] });
       onSuccess();
     },
-    onError: () => toast({ title: "Error", description: "Could not submit request. Please try again.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
   const CUR = { ZW: "USD ($)", ZA: "ZAR (R)", JP: "JPY (¥)" }[country] ?? "USD";
