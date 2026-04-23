@@ -43,8 +43,8 @@ export default function Chat() {
           <div className="space-y-3">
             {conversations.map((conversation: Conversation) => {
               const otherParticipant = conversation.customerId === user?.id 
-                ? `Agent ${conversation.agentId.slice(-4)}`
-                : `Customer ${conversation.customerId.slice(-4)}`;
+                ? `Agent ${(conversation.agentId || "me").slice(-4)}`
+                : `Customer ${(conversation.customerId || "User").slice(-4)}`;
 
               return (
                 <Link key={conversation.id} href={`/chat/${conversation.id}`}>

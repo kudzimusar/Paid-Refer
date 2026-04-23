@@ -468,76 +468,110 @@ export const MOCK_ACTIVITY: MockActivity[] = [
 // ── Agent Dashboard Mock Data ────────────────────────────────
 
 export interface MockLead {
-  id: string;
+  id: number;
   status: string;
   customerName: string;
   propertyType: string;
   city: string;
   preferredLocation: string;
-  budgetMin: string;
-  budgetMax: string;
+  budgetMin: number;
+  budgetMax: number;
+  currency: string;
   matchScore: number;
   aiSummary: string;
   createdAt: string;
   conversationId: string | null;
+  country: "ZW" | "ZA" | "JP";
+  source: "web" | "ussd" | "referral" | "direct";
+  customerPhone: string;
+  assignedAt: string;
+  lastContactAt: string | null;
 }
 
 export const MOCK_AGENT_LEADS: MockLead[] = [
   {
-    id: "lead_1",
-    status: "pending",
+    id: 1,
+    status: "new",
+    customerId: "cust_1",
     customerName: "Chipo Ndlovu",
     propertyType: "2-Bedroom Flat",
     city: "Harare",
     preferredLocation: "Borrowdale",
-    budgetMin: "700",
-    budgetMax: "900",
+    budgetMin: 700,
+    budgetMax: 900,
+    currency: "USD",
     matchScore: 0.91,
     aiSummary: "Urgent move — pre-approved financing, pet-friendly required. High close probability.",
     createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
     conversationId: null,
+    country: "ZW",
+    source: "referral",
+    customerPhone: "+263771234567",
+    assignedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    lastContactAt: null,
   },
   {
-    id: "lead_2",
-    status: "pending",
+    id: 2,
+    status: "new",
+    customerId: "cust_2",
     customerName: "Tapiwa Moyo",
     propertyType: "3-Bedroom House",
     city: "Harare",
     preferredLocation: "Mount Pleasant",
-    budgetMin: "1000",
-    budgetMax: "1400",
+    budgetMin: 1000,
+    budgetMax: 1400,
+    currency: "USD",
     matchScore: 0.78,
     aiSummary: "Family of 4, needs garden and garage. Viewing 3 options next week.",
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     conversationId: null,
+    country: "ZW",
+    source: "web",
+    customerPhone: "+263772345678",
+    assignedAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
+    lastContactAt: null,
   },
   {
-    id: "lead_3",
-    status: "contacted",
+    id: 3,
+    status: "in_progress",
+    customerId: "cust_3",
     customerName: "Rudo Chikwamba",
     propertyType: "1-Bedroom Studio",
     city: "Harare",
     preferredLocation: "Avondale",
-    budgetMin: "400",
-    budgetMax: "600",
+    budgetMin: 400,
+    budgetMax: 600,
+    currency: "USD",
     matchScore: 0.84,
     aiSummary: "Student, flexible on move date, wants furnished. Budget match is strong.",
     createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    conversationId: "conv_1",
+    conversationId: "conv_3",
+    country: "ZW",
+    source: "referral",
+    customerPhone: "+263773456789",
+    assignedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    lastContactAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "lead_4",
+    id: 4,
     status: "in_progress",
+    customerId: "cust_4",
     customerName: "Linda Matsumoto",
     propertyType: "Townhouse",
     city: "Harare",
     preferredLocation: "Highlands",
-    budgetMin: "1200",
-    budgetMax: "1800",
+    budgetMin: 1200,
+    budgetMax: 1800,
+    currency: "USD",
     matchScore: 0.69,
     aiSummary: "Expatriate relocation, 2-year lease preferred. Company paying rent.",
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    conversationId: "conv_2",
+    conversationId: "conv_4",
+    country: "ZW",
+    source: "direct",
+    customerPhone: "+263774567890",
+    assignedAt: new Date(Date.now() - 1.8 * 24 * 60 * 60 * 1000).toISOString(),
+    lastContactAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
   },
 ];
 

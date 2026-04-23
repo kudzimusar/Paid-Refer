@@ -418,6 +418,11 @@ function CompletionScreen({ role }: { role: string }) {
           "✦ Share it with people looking for homes",
           "✦ Earn when deals close",
         ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
+        {role === "admin" && [
+          "✦ Full system oversight activated",
+          "✦ Review agent verification requests",
+          "✦ Monitor network-wide POI ledger",
+        ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
       </div>
 
       <button
@@ -445,6 +450,7 @@ export default function OnboardingPage() {
   const isAgent = role === "agent";
   const isReferrer = role === "referrer";
   const isCustomer = role === "customer";
+  const isAdmin = role === "admin";
   const totalSteps = isAgent || isReferrer ? 2 : 1;
 
   const STEP_LABELS = isAgent
@@ -466,7 +472,7 @@ export default function OnboardingPage() {
       return await apiRequest("PUT", "/api/auth/contact-details", data);
     },
     onSuccess: () => {
-      if (isCustomer) completeMutation.mutate();
+      if (isCustomer || isAdmin) completeMutation.mutate();
       else setStep(2);
     },
     onError: () => toast({ title: "Error", description: "Failed to save contact details. Please try again.", variant: "destructive" }),

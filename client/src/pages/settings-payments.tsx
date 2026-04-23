@@ -157,23 +157,43 @@ export default function SettingsPaymentsPage() {
           </PremiumCard>
 
           {/* Zimbabwe Local Options */}
-          <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+          <div className="bg-blue-50 border border-blue-100 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <span className="text-6xl text-blue-900 font-black">ZW</span>
+            </div>
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-8 h-8 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-bold text-blue-900">Zimbabwe Local Settlements</h4>
-                <p className="text-[11px] text-blue-700 font-medium">EcoCash · InnBucks · Paynow</p>
+                <h4 className="font-black text-blue-900 text-lg">Zimbabwe Local Payouts</h4>
+                <div className="flex gap-2 mt-1">
+                  <span className="bg-white/60 text-blue-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-100">EcoCash</span>
+                  <span className="bg-white/60 text-blue-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-100">InnBucks</span>
+                  <span className="bg-white/60 text-blue-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-100">Paynow</span>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-blue-800/80 leading-relaxed">
-              Since Stripe has limited support in Zimbabwe, we've integrated local gateways for instant P2P settlements. 
-              Agents can pay commissions directly via **EcoCash** or **InnBucks** with automated proof-of-payment tracking.
-            </p>
-            <div className="flex gap-2">
-              <div className="bg-white/50 px-3 py-1 rounded-lg text-[10px] font-bold text-blue-600">INSTANT</div>
-              <div className="bg-white/50 px-3 py-1 rounded-lg text-[10px] font-bold text-blue-600">ZERO FEE</div>
+            
+            <div className="space-y-4 relative z-10">
+              <p className="text-sm text-blue-800/80 leading-relaxed font-medium">
+                Stripe does not currently support direct bank payouts in Zimbabwe. For local agents and referrers, we use **Secure P2P Settlements**.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/40 p-4 rounded-2xl border border-blue-100">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">How it works</p>
+                  <p className="text-xs text-blue-900 font-bold leading-tight">Agents pay commissions via EcoCash/InnBucks directly to the network.</p>
+                </div>
+                <div className="bg-white/40 p-4 rounded-2xl border border-blue-100">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Ledger Security</p>
+                  <p className="text-xs text-blue-900 font-bold leading-tight">Every payment is recorded in the Proof-of-Introduction ledger for audit.</p>
+                </div>
+              </div>
+
+              <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-[0.98]">
+                Setup Local Payout Wallet
+              </button>
             </div>
           </div>
         </div>

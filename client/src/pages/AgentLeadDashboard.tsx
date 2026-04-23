@@ -34,6 +34,16 @@ export default function AgentLeadDashboard() {
         message: "Customer matched. Start a conversation now.",
         link: "/chat"
       });
+
+      // Simulation of cross-user notification loop
+      setTimeout(() => {
+        sendNotification({
+          type: "status",
+          title: "System Broadcast 📡",
+          message: "Referrer & Customer have been notified of your engagement.",
+        });
+      }, 1500);
+
       return true;
     }
     return false;
@@ -47,6 +57,15 @@ export default function AgentLeadDashboard() {
         title: "Deal Closed! 💰",
         message: `Congratulations! A deal has been successfully finalized. Commissions are being processed.`,
       });
+
+      // Cross-user settlement loop
+      setTimeout(() => {
+        sendNotification({
+          type: "payment",
+          title: "Settlement Disbursed",
+          message: "Commission for this deal has been credited to the Referrer's network wallet.",
+        });
+      }, 2000);
       return true;
     }
     return false;

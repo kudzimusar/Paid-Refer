@@ -4,28 +4,67 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Phone, Plus, Send, Image } from "lucide-react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { isDemoMode } from "@/lib/demoMode";
+import { ArrowLeft, Phone, Plus, Send, Image, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import type { Conversation, Message } from "@/types";
+
+const MOCK_MESSAGES: Message[] = [
+  {
+    id: "m1",
+    conversationId: "conv_1",
+    senderId: "customer_1",
+    messageType: "text",
+    content: "Hi, I'm interested in the 2-bedroom flat in Borrowdale. Is it still available?",
+    isRead: true,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: "m2",
+    conversationId: "conv_1",
+    senderId: "me",
+    messageType: "text",
+    content: "Hello! Yes, it is. Would you like to schedule a viewing for this weekend?",
+    isRead: true,
+    createdAt: new Date(Date.now() - 3000000).toISOString(),
+  },
+  {
+    id: "m3",
+    conversationId: "conv_1",
+    senderId: "customer_1",
+    messageType: "text",
+    content: "That sounds great. Sunday afternoon works best for me.",
+    isRead: true,
+    createdAt: new Date(Date.now() - 2400000).toISOString(),
+  }
+];
 
 interface ChatInterfaceProps {
   conversation: Conversation;
 }
 
 export function ChatInterface({ conversation }: ChatInterfaceProps) {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { toast } = useToast();
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: messages = [], isLoading } = useQuery({
+  const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ['/api/conversation', conversation.id, 'messages'],
+    enabled: !isDemoMode(),
   });
+
+  const [localMessages, setLocalMessages] = useState<Message[]>(
+    isDemoMode() ? MOCK_MESSAGES : []
+  );
+
+  useEffect(() => {
+    if (!isDemoMode() && messages) {
+      setLocalMessages(messages);
+    }
+  }, [messages]);
 
   const { sendMessage } = useWebSocket((message) => {
     if (message.type === 'new_message' && message.data.conversationId === conversation.id) {
@@ -75,10 +114,38 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (messageText.trim()) {
-      sendMessageMutation.mutate({
-        content: messageText.trim(),
-        messageType: 'text',
-      });
+      if (isDemoMode()) {
+        const newMessage: Message = {
+          id: Math.random().toString(),
+          conversationId: conversation.id,
+          senderId: "me",
+          messageType: 'text',
+          content: messageText.trim(),
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        setLocalMessages(prev => [...prev, newMessage]);
+        setMessageText("");
+        
+        // Simulate auto-reply
+        setTimeout(() => {
+          const reply: Message = {
+            id: Math.random().toString(),
+            conversationId: conversation.id,
+            senderId: conversation.customerId,
+            messageType: 'text',
+            content: "Thanks! I'll get back to you shortly. I'm just checking my schedule.",
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          };
+          setLocalMessages(prev => [...prev, reply]);
+        }, 1500);
+      } else {
+        sendMessageMutation.mutate({
+          content: messageText.trim(),
+          messageType: 'text',
+        });
+      }
     }
   };
 
@@ -91,8 +158,8 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
   };
 
   const otherParticipant = conversation.customerId === user?.id 
-    ? `Agent ${conversation.agentId.slice(-4)}`
-    : `Customer ${conversation.customerId.slice(-4)}`;
+    ? `Agent ${(conversation.agentId || "me").slice(-4)}`
+    : `Customer ${(conversation.customerId || "User").slice(-4)}`;
 
   const otherParticipantId = conversation.customerId === user?.id 
     ? conversation.agentId 
@@ -142,8 +209,8 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
       {/* Messages */}
       <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-        {(messages as Message[]).map((message: Message) => {
-          const isOwn = message.senderId === user?.id;
+        {localMessages.map((message: Message) => {
+          const isOwn = message.senderId === "me" || message.senderId === user?.id || message.senderId === user?.userId;
           const messageTime = new Date(message.createdAt).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'

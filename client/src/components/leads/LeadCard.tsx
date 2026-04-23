@@ -85,7 +85,7 @@ export function LeadCard({
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500
                           flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {lead.customerName.charAt(0).toUpperCase()}
+            {(lead.customerName || "Customer").charAt(0).toUpperCase()}
           </div>
 
           <div className="min-w-0">
