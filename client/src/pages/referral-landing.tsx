@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { ReferralLink } from "@shared/schema";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ShieldCheck, Zap, MessageSquare, ArrowRight, Loader2, Award, Sparkles, MapPin, Shield } from "lucide-react";
+import { ShieldCheck, Zap, MessageSquare, ArrowRight, Loader2, Award, Sparkles, MapPin, Shield, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

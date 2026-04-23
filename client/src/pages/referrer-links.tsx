@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import {
   Link2, Copy, Share2, Plus, Sparkles, ChevronDown,
-  ChevronUp, X, Loader2, Filter, Search, QrCode, Download
+  ChevronUp, X, Loader2, Filter, Search, QrCode, Download,
+  ShieldCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BottomNav } from "@/components/layout/BottomNav";

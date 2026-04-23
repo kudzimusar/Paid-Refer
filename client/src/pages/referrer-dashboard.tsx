@@ -5,6 +5,7 @@ import {
   Link2, TrendingUp, Share2, Copy, ExternalLink,
   Plus, X, ChevronDown, ChevronUp, Sparkles, Banknote,
   CheckCircle2, Loader2, Trophy, Target, RotateCcw,
+  QrCode, ShieldCheck
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -19,6 +20,7 @@ import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
 import { useForm } from "react-hook-form";
 import { isDemoMode } from "@/lib/demoMode";
+import { cn } from "@/lib/utils";
 import { getMockReferralLinks, getMockActivity, type MockActivity } from "@/lib/mockData";
 
 interface ReferralLink {
