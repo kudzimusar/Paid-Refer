@@ -13,6 +13,7 @@ import { AIActivityIndicator } from "@/components/demo/AIActivityIndicator";
 import { GuidedTourController } from "@/components/demo/GuidedTourController";
 import { lazy, Suspense } from "react";
 import { isDemoMode } from "@/lib/demoMode";
+import { cn } from "@/lib/utils";
 
 // ── Pages ──────────────────────────────────────────────────
 import SplashPage from "@/pages/splash";
@@ -37,6 +38,28 @@ const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard").then(
 const ReferralLandingPage = lazy(() => import("@/pages/referral-landing"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
+
+// ── Global Layout ──────────────────────────────────────────
+import { BottomNav } from "@/components/layout/BottomNav";
+import { useLocation } from "wouter";
+
+function GlobalLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext();
+  const [location] = useLocation();
+
+  // Public paths where bottom nav shouldn't show
+  const publicPaths = ["/", "/login", "/register", "/onboarding"];
+  const isPublic = publicPaths.some(p => location === p || location.startsWith("/register/"));
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className={cn("flex-1", user && !isPublic ? "pb-24" : "")}>
+        {children}
+      </div>
+      {user && !isPublic && <BottomNav />}
+    </div>
+  );
+}
 
 // ── Full-page spinner ──────────────────────────────────────
 function FullPageSpinner() {
@@ -86,53 +109,55 @@ function ProtectedRoute({ path, roles, component: Component }: {
 // ── App Content ────────────────────────────────────────────
 function AppContent() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Global Demo Components */}
-      {isDemoMode() && (
-        <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 text-sm font-medium z-[100]">
-          🎭 DEMO MODE - All data is mocked for presentation purposes
-        </div>
-      )}
-      <RoleSwitcher />
-      <AIActivityIndicator />
-      <GuidedTourController />
+    <GlobalLayout>
+      <div className="min-h-screen bg-background">
+        {/* Global Demo Components */}
+        {isDemoMode() && (
+          <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 text-sm font-medium z-[100]">
+            🎭 DEMO MODE - All data is mocked for presentation purposes
+          </div>
+        )}
+        <RoleSwitcher />
+        <AIActivityIndicator />
+        <GuidedTourController />
 
-      <Suspense fallback={<FullPageSpinner />}>
-        <Switch>
-          {/* ── Public ── */}
-          <Route path="/" component={SplashPage} />
-          <Route path="/login" component={LoginPage} />
-          <Route path="/register" component={RoleSelectPage} />
-          <Route path="/register/:role" component={OnboardingPage} />
-          <Route path="/r/:shortCode" component={ReferralLandingPage} />
-
-
-          {/* ── Agent ── */}
-          <ProtectedRoute path="/dashboard" roles={["agent", "admin"]} component={AgentDashboard} />
-          <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentLeadDashboard} />
-          <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={ListingsPage} />
-          <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer"]} component={SettingsPaymentsPage} />
-          <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
-          <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
+        <Suspense fallback={<FullPageSpinner />}>
+          <Switch>
+            {/* ── Public ── */}
+            <Route path="/" component={SplashPage} />
+            <Route path="/login" component={LoginPage} />
+            <Route path="/register" component={RoleSelectPage} />
+            <Route path="/register/:role" component={OnboardingPage} />
+            <Route path="/r/:shortCode" component={ReferralLandingPage} />
 
 
-          {/* ── Customer ── */}
-          <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
-          <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
-          <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
-          <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
-          <ProtectedRoute path="/profile" roles={["customer", "referrer"]} component={ProfilePage} />
-          <ProtectedRoute path="/profilepage" roles={["customer", "referrer"]} component={ProfilePage} />
+            {/* ── Agent ── */}
+            <ProtectedRoute path="/dashboard" roles={["agent", "admin"]} component={AgentDashboard} />
+            <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentLeadDashboard} />
+            <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={ListingsPage} />
+            <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer"]} component={SettingsPaymentsPage} />
+            <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
+            <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
 
-          {/* ── Referrer ── */}
-          <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
-          <ProtectedRoute path="/refer/links" roles={["referrer"]} component={ReferrerLinksPage} />
 
-          {/* ── 404 ── */}
-          <Route component={NotFoundPage} />
-        </Switch>
-      </Suspense>
-    </div>
+            {/* ── Customer ── */}
+            <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
+            <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
+            <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
+            <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
+            <ProtectedRoute path="/profile" roles={["customer", "referrer"]} component={ProfilePage} />
+            <ProtectedRoute path="/profilepage" roles={["customer", "referrer"]} component={ProfilePage} />
+
+            {/* ── Referrer ── */}
+            <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
+            <ProtectedRoute path="/refer/links" roles={["referrer"]} component={ReferrerLinksPage} />
+
+            {/* ── 404 ── */}
+            <Route component={NotFoundPage} />
+          </Switch>
+        </Suspense>
+      </div>
+    </GlobalLayout>
   );
 }
 

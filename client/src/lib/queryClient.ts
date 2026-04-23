@@ -40,18 +40,15 @@ export async function apiFetch<T>(
         createdAt: new Date().toISOString(),
       };
       
-      // Persist the request
       const existing = JSON.parse(localStorage.getItem("demo_requests") || "[]");
       localStorage.setItem("demo_requests", JSON.stringify([newRequest, ...existing]));
       
-      // Update Referrer stats if in demo mode
       const links = JSON.parse(localStorage.getItem("demo_links") || "[]");
       if (links.length > 0) {
         links[0].totalConversions = (links[0].totalConversions || 0) + 1;
         links[0].totalEarningsUsd = (parseFloat(links[0].totalEarningsUsd || "0") + 5).toString();
         localStorage.setItem("demo_links", JSON.stringify(links));
         
-        // Add activity
         const activity = JSON.parse(localStorage.getItem("demo_activity") || "[]");
         activity.unshift({
           id: "act_" + Date.now(),
@@ -63,7 +60,6 @@ export async function apiFetch<T>(
         localStorage.setItem("demo_activity", JSON.stringify(activity.slice(0, 10)));
       }
 
-      // Update Admin metrics
       const adminMetrics = JSON.parse(localStorage.getItem("demo_admin_metrics") || "null");
       if (adminMetrics) {
         adminMetrics.newLeadsToday += 1;
@@ -77,24 +73,54 @@ export async function apiFetch<T>(
     if (url === "/api/admin/metrics") {
       let metrics = JSON.parse(localStorage.getItem("demo_admin_metrics") || "null");
       if (!metrics) {
-        metrics = {
-          activeUsersNow: 42,
-          openConversations: 128,
-          pendingVerifications: 5,
-          openDisputes: 0,
-          newLeadsToday: 24,
-          dealsClosedToday: 8,
-          revenueToday: 1250,
-          health: { n8nStatus: "healthy", failedWorkflows: 0, unreadMessages: 3 }
-        };
+        metrics = { activeUsersNow: 42, openConversations: 128, pendingVerifications: 5, openDisputes: 0, newLeadsToday: 24, dealsClosedToday: 8, revenueToday: 1250, health: { n8nStatus: "healthy", failedWorkflows: 0, unreadMessages: 3 } };
         localStorage.setItem("demo_admin_metrics", JSON.stringify(metrics));
       }
       return metrics as any;
+    }
+
+    if (url === "/api/notifications") {
+      const requests = JSON.parse(localStorage.getItem("demo_requests") || "[]");
+      const notifications: any[] = [
+        { id: "n_welcome", type: "system", title: "Welcome to Paid-Refer", message: "Your AI-powered property journey begins here.", timestamp: new Date().toISOString(), isRead: true }
+      ];
+      
+      requests.forEach((r: any) => {
+        notifications.push({
+          id: "notif_sub_" + r.id,
+          type: "status",
+          title: "Search Initiated",
+          message: `Gemini is analyzing market data for your ${r.propertyType} in ${r.preferredCity}.`,
+          timestamp: r.createdAt,
+          isRead: true
+        });
+        
+        if (r.status === "contacted") {
+          notifications.push({
+            id: "notif_match_" + r.id,
+            type: "match",
+            title: "Agent Matched! 🚀",
+            message: `A top-rated agent has accepted your request for ${r.preferredCity}.`,
+            timestamp: new Date().toISOString(),
+            isRead: false
+          });
+        }
+      });
+      return notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as any;
+    }
+
+    if (url === "/api/customer/suggestions") {
+      return [
+        { id: 1, title: "Modern 3-Bed Villa", price: "$250,000", area: "Borrowdale", img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400", score: "98% Match" },
+        { id: 2, title: "Executive Flat", price: "$120,000", area: "Avondale", img: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400", score: "92% Match" },
+        { id: 3, title: "Luxury Estate", price: "$450,000", area: "Glen Lorne", img: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400", score: "89% Match" }
+      ] as any;
     }
     
     if (url === "/api/referrer/links") {
       let links = JSON.parse(localStorage.getItem("demo_links") || "null");
       if (!links) {
+        const { getMockReferralLinks } = await import("./mockData");
         links = getMockReferralLinks();
         localStorage.setItem("demo_links", JSON.stringify(links));
       }
@@ -104,6 +130,7 @@ export async function apiFetch<T>(
     if (url === "/api/referrer/activity") {
       let activity = JSON.parse(localStorage.getItem("demo_activity") || "null");
       if (!activity) {
+        const { getMockActivity } = await import("./mockData");
         activity = getMockActivity();
         localStorage.setItem("demo_activity", JSON.stringify(activity));
       }
@@ -111,10 +138,7 @@ export async function apiFetch<T>(
     }
 
     if (url === "/api/customer/leads") {
-      const mockLeads = [...getMockAgentLeads()];
       const userRequests = JSON.parse(localStorage.getItem("demo_requests") || "[]");
-      
-      // Auto-match logic: if a request is older than 5 seconds, move it to 'contacted' status
       const now = Date.now();
       let hasUpdates = false;
       const processedRequests = userRequests.map((req: any) => {
@@ -126,28 +150,26 @@ export async function apiFetch<T>(
         return req;
       });
 
-      if (hasUpdates) {
-        localStorage.setItem("demo_requests", JSON.stringify(processedRequests));
-      }
+      if (hasUpdates) localStorage.setItem("demo_requests", JSON.stringify(processedRequests));
 
-      // Map user requests to "active leads" for the dashboard
       const activeLeads = processedRequests.map((req: any) => ({
         id: "lead_" + req.id,
         status: req.status,
-        customerName: "You",
+        agentName: "Musarurwa",
         propertyType: req.propertyType || "Property",
-        preferredArea: req.preferredCity || "Selected Area",
+        preferredArea: req.preferredCity || "Harare",
         budgetMin: String(req.budgetMin || 0),
         budgetMax: String(req.budgetMax || 0),
-        matchScore: 0.95,
+        matchScore: 0.98,
         aiSummary: req.status === "pending" 
-          ? "We are currently matching you with verified agents..." 
-          : "Match found! A verified agent has accepted your request.",
+          ? "Our Gemini engine is currently scoring available agents against your profile..." 
+          : "Verified match found! This agent has a 98% success rate in " + req.preferredCity + ".",
         createdAt: req.createdAt,
         conversationId: req.status === "contacted" ? "conv_" + req.id : null,
       }));
 
-      return [...activeLeads, ...mockLeads] as any;
+      const { getMockAgentLeads } = await import("./mockData");
+      return [...activeLeads, ...getMockAgentLeads()] as any;
     }
 
     if (url === "/api/conversations") {
@@ -157,44 +179,22 @@ export async function apiFetch<T>(
         .map((r: any) => ({
           id: "conv_" + r.id,
           leadId: "lead_" + r.id,
-          customerId: "demo_user_12345",
+          customerId: "demo_user",
           agentId: "agent_verified",
           isActive: true,
-          createdAt: new Date().toISOString(),
+          createdAt: r.createdAt,
           updatedAt: new Date().toISOString()
         }));
 
       return [
         ...userConvs,
-        { id: "conv_1", leadId: "lead_3", customerId: "demo_user_12345", agentId: "agent_1", isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: "conv_2", leadId: "lead_4", customerId: "demo_user_12345", agentId: "agent_2", isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        { id: "conv_1", leadId: "lead_3", customerId: "demo_user", agentId: "agent_1", isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       ] as any;
-    }
-
-    if (url === "/api/notifications") {
-      const userRequests = JSON.parse(localStorage.getItem("demo_requests") || "[]");
-      const systemNotifs = [
-        { id: "n1", type: "system", title: "Welcome to Paid-Refer", message: "Start your journey by searching for a property or referring a friend.", timestamp: new Date().toISOString(), isRead: true },
-      ];
-      
-      const requestNotifs = userRequests.map((r: any) => ({
-        id: "notif_" + r.id,
-        type: r.status === "pending" ? "status" : "match",
-        title: r.status === "pending" ? "Request Submitted" : "Agent Matched!",
-        message: r.status === "pending" 
-          ? `Your search for a ${r.propertyType} in ${r.preferredCity} has been received.`
-          : `We found a verified agent for your ${r.propertyType} search!`,
-        timestamp: r.createdAt,
-        isRead: false
-      }));
-
-      return [...requestNotifs, ...systemNotifs] as any;
     }
 
     if (url.includes("/messages")) {
       return [
-        { id: "m1", conversationId: "conv_1", senderId: "agent_1", messageType: "text", content: "Hi! I've found a perfect 1-bedroom apartment in Avondale that matches your criteria. Would you like to schedule a viewing?", createdAt: new Date().toISOString(), isRead: true },
-        { id: "m2", conversationId: "conv_1", senderId: "demo_user_12345", messageType: "text", content: "Yes, please! Is it available this weekend?", createdAt: new Date().toISOString(), isRead: true }
+        { id: "m1", conversationId: "conv_1", senderId: "agent_1", messageType: "text", content: "Hi! I've found a property that matches your AI profile perfectly.", createdAt: new Date().toISOString(), isRead: true },
       ] as any;
     }
 
@@ -203,17 +203,22 @@ export async function apiFetch<T>(
       const userLeads = userRequests.map((req: any) => ({
         id: "lead_" + req.id,
         status: req.status,
-        customerName: "Demo Customer",
+        customerName: "Demo User",
         propertyType: req.propertyType || "Property",
         preferredArea: req.preferredCity || "Harare",
         budgetMin: String(req.budgetMin || 0),
         budgetMax: String(req.budgetMax || 0),
-        matchScore: 0.95,
-        aiSummary: "Recently submitted inquiry via referral link.",
+        matchScore: 0.98,
+        aiSummary: "Recently submitted inquiry via referral link. High intent detected.",
         createdAt: req.createdAt,
         conversationId: req.status === "contacted" ? "conv_" + req.id : null,
       }));
+      const { getMockAgentLeads } = await import("./mockData");
       return [...userLeads, ...getMockAgentLeads()] as any;
+    }
+
+    if (url.startsWith("/api/")) {
+      return { success: true, data: [] } as any;
     }
 
     // Default mock response for other endpoints to prevent 404 crashes
