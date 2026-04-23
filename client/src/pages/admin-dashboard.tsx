@@ -186,6 +186,19 @@ export default function AdminDashboard() {
             </PremiumCard>
 
             <PremiumCard className="bg-neutral-800/40 border-neutral-800 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold flex items-center gap-2">
+                  <Database className="w-4 h-4 text-primary" />
+                  Live Ecosystem Ledger
+                </h3>
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <div className="space-y-6">
+                <EcosystemFeed />
+              </div>
+            </PremiumCard>
+
+            <PremiumCard className="bg-neutral-800/40 border-neutral-800 p-6">
               <h3 className="font-bold mb-4">Support & Moderation</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-xs text-neutral-400">
@@ -309,6 +322,35 @@ function PayoutItem({ agent, amount, date }: { agent: string; amount: number; da
         <p className="text-[10px] text-neutral-500">{date}</p>
       </div>
       <p className="font-black text-sm text-emerald-400">${amount.toFixed(2)}</p>
+    </div>
+  );
+}
+
+function EcosystemFeed() {
+  const { data: events = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/ecosystem-events"],
+    refetchInterval: 10000,
+  });
+
+  return (
+    <div className="space-y-5">
+      {events.map((ev, i) => (
+        <motion.div 
+          key={ev.id}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.1 }}
+          className="relative pl-6 border-l border-neutral-700"
+        >
+          <div className={`absolute -left-1 top-1 h-2 w-2 rounded-full ${
+            ev.type === 'deal' ? 'bg-emerald-500' : 
+            ev.type === 'referral' ? 'bg-primary' : 
+            ev.type === 'match' ? 'bg-blue-400' : 'bg-neutral-500'
+          }`} />
+          <p className="text-[11px] text-neutral-500 font-bold mb-1">{ev.user} · {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          <p className="text-xs text-neutral-200 leading-relaxed font-medium">{ev.message}</p>
+        </motion.div>
+      ))}
     </div>
   );
 }

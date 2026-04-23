@@ -231,11 +231,16 @@ export async function apiFetch<T>(
       ] as any;
     }
 
-    if (url.startsWith("/api/")) {
-      return { success: true, data: [] } as any;
+    if (url === "/api/admin/ecosystem-events") {
+      return [
+        { id: "ev_1", type: "referral", message: "New referral link generated for Borrowdale", user: "Tendai M.", timestamp: new Date(Date.now() - 5 * 60000).toISOString() },
+        { id: "ev_2", type: "match", message: "Agent Musarurwa matched with customer 'Chipo'", user: "AI Engine", timestamp: new Date(Date.now() - 15 * 60000).toISOString() },
+        { id: "ev_3", type: "deal", message: "Deal closed: $1,200 property in Avondale", user: "Elite Realty", timestamp: new Date(Date.now() - 45 * 60000).toISOString() },
+        { id: "ev_4", type: "payout", message: "Commission split: $60 to Referrer 'Rudo'", user: "Settlement Bot", timestamp: new Date(Date.now() - 46 * 60000).toISOString() },
+        { id: "ev_5", type: "verification", message: "New agent license submitted for review", user: "Kenji S.", timestamp: new Date(Date.now() - 120 * 60000).toISOString() },
+      ] as any;
     }
 
-    // Default mock response for other endpoints to prevent 404 crashes
     if (url.startsWith("/api/")) {
       return { success: true, data: [] } as any;
     }
