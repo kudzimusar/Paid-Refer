@@ -239,8 +239,14 @@ function AgentProfileStep({ onNext, onBack }: { onNext: (data: any) => void; onB
         <ChipSelector
           options={PROPERTY_TYPES.map(t => ({ label: t, value: t }))}
           selected={watch("propertyTypes") ?? []}
-          onChange={(v) => setValue("propertyTypes", v)}
+          onChange={(v) => {
+            setValue("propertyTypes", v);
+            if (v.length > 0) {
+               // Force validation check
+            }
+          }}
         />
+        {errors.propertyTypes && <p className="text-xs text-red-500 mt-1">{String(errors.propertyTypes.message)}</p>}
       </div>
 
       <div>
@@ -251,6 +257,7 @@ function AgentProfileStep({ onNext, onBack }: { onNext: (data: any) => void; onB
           onChange={(v) => setValue("languagesSpoken", v)}
           color="green"
         />
+        {errors.languagesSpoken && <p className="text-xs text-red-500 mt-1">{String(errors.languagesSpoken.message)}</p>}
       </div>
 
       <div>

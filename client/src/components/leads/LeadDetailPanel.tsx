@@ -1,4 +1,5 @@
 import { type Lead } from "../../hooks/useLeads";
+import { ShieldCheck } from "lucide-react";
 
 interface Props {
   lead: Lead;
@@ -28,8 +29,26 @@ export function LeadDetailPanel({ lead, onClose, onOpenChat }: Props) {
               <DetailBox label="Property" value={lead.propertyType} />
               <DetailBox label="City" value={lead.city} />
               <DetailBox label="Budget" value={`${lead.budgetMin} - ${lead.budgetMax} ${lead.currency}`} />
-              <DetailBox label="Source" value={lead.source} />
+              <DetailBox label="Source" value={lead.source.toUpperCase()} />
             </div>
+          </div>
+
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-2 opacity-10">
+               <ShieldCheck className="w-12 h-12 text-emerald-600" />
+             </div>
+             <h3 className="font-black text-[10px] text-emerald-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+               <ShieldCheck className="w-3.5 h-3.5" />
+               Proof of Introduction (POI)
+             </h3>
+             <div className="space-y-1">
+               <p className="text-sm font-black text-emerald-900">
+                 {lead.referrerName ? lead.referrerName : "Organic Growth (Web)"}
+               </p>
+               <p className="text-[10px] text-emerald-600 font-bold uppercase">
+                 {lead.source === "referral" ? "Verified Intelligence Referral" : "Direct Customer Inquiry"}
+               </p>
+             </div>
           </div>
 
           <div className="pt-6 border-t">

@@ -73,10 +73,12 @@ export function BottomNav() {
     <nav className="bottom-nav">
       <div className={cn("grid h-full max-w-lg mx-auto", gridColsMap[items.length] || "grid-cols-4")}>
         {items.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? location === "/"
-              : location === item.href || (location.startsWith(item.href) && item.href !== "/refer" && item.href !== "/dashboard" && item.href !== "/search" && item.href !== "/profile");
+          // Strict matching for top-level hubs to prevent double-highlights
+          const isTopLevelHub = ["/refer", "/dashboard", "/search", "/profile"].includes(item.href);
+          const isActive = isTopLevelHub 
+            ? location === item.href 
+            : location === item.href || (location.startsWith(item.href) && item.href !== "/");
+          
           const Icon = item.icon;
 
           return (

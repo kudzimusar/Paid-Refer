@@ -13,6 +13,7 @@ const ROLE_CONTENT = {
     title: "Referrer Excellence",
     subtitle: "Master the art of high-conversion referrals",
     color: "from-blue-600 to-indigo-700",
+    stats: { label: "Average Earning", value: "$120/mo", growth: "+42%" },
     strategies: [
       {
         title: "Earn $5 Per Verified Lead",
@@ -32,12 +33,18 @@ const ROLE_CONTENT = {
         icon: TrendingUp,
         tag: "Passive"
       }
+    ],
+    tutorials: [
+      { title: "Setting up your first Secure Link", duration: "2:45", views: "1.2k" },
+      { title: "Optimizing WhatsApp Status for Leads", duration: "4:12", views: "3.4k" },
+      { title: "Understanding the POI Security Receipt", duration: "3:30", views: "850" }
     ]
   },
   agent: {
     title: "Agent Mastery",
     subtitle: "Close more deals with AI-scored leads",
     color: "from-purple-600 to-fuchsia-700",
+    stats: { label: "Conversion Lift", value: "+28%", growth: "+15%" },
     strategies: [
       {
         title: "AI Lead Scoring",
@@ -57,12 +64,18 @@ const ROLE_CONTENT = {
         icon: ShieldCheck,
         tag: "Rank"
       }
+    ],
+    tutorials: [
+      { title: "Mastering the AI Lead Score", duration: "5:20", views: "2.1k" },
+      { title: "Handling High-Urgency Leads", duration: "3:45", views: "1.8k" },
+      { title: "Closing Deals via WhatsApp Bridge", duration: "6:10", views: "4.2k" }
     ]
   },
   customer: {
     title: "Smart Search Academy",
     subtitle: "How to find your perfect property safely",
     color: "from-emerald-600 to-teal-700",
+    stats: { label: "Time Saved", value: "14 Days", growth: "-60%" },
     strategies: [
       {
         title: "Expert Matching",
@@ -82,6 +95,11 @@ const ROLE_CONTENT = {
         icon: MessageCircle,
         tag: "Speed"
       }
+    ],
+    tutorials: [
+      { title: "How Expert Matching Works", duration: "1:30", views: "5.6k" },
+      { title: "Your Safety & POI Security", duration: "2:15", views: "3.1k" },
+      { title: "Communicating with Agents Safely", duration: "3:05", views: "2.4k" }
     ]
   }
 };
@@ -125,12 +143,12 @@ export default function AcademyPage() {
             
             <div className="flex gap-4 pt-4">
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1 border border-white/10">
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Success Rate</p>
-                <p className="text-2xl font-black">+42%</p>
+                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Success Metric</p>
+                <p className="text-2xl font-black">{content.stats.growth}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1 border border-white/10">
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Average Earning</p>
-                <p className="text-2xl font-black">$120/mo</p>
+                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">{content.stats.label}</p>
+                <p className="text-2xl font-black">{content.stats.value}</p>
               </div>
             </div>
           </div>
@@ -177,6 +195,39 @@ export default function AcademyPage() {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Tutorials Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Video Tutorials</h2>
+            <div className="h-px flex-1 bg-gray-100 mx-4" />
+          </div>
+          
+          <div className="space-y-3">
+            {content.tutorials.map((tutorial, i) => (
+              <motion.div
+                key={tutorial.title}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * i }}
+                className="premium-card p-4 flex items-center gap-4 hover:border-blue-200 transition-all cursor-pointer group"
+              >
+                <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 transition-colors">
+                  <PlayCircle className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-neutral-900 truncate">{tutorial.title}</h4>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase">{tutorial.duration}</span>
+                    <div className="w-1 h-1 rounded-full bg-neutral-200" />
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase">{tutorial.views} views</span>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-neutral-300 group-hover:text-blue-500 transition-colors" />
+              </motion.div>
+            ))}
           </div>
         </div>
 

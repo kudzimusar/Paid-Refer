@@ -15,8 +15,15 @@ export default function ReferralLandingPage() {
   const { validateCode } = useProofOfIntroduction();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [shortCode, setShortCode] = useState<string | null>(null);
 
-  const shortCode = params?.shortCode;
+  useEffect(() => {
+    const code = params?.shortCode;
+    if (code) {
+      setShortCode(code);
+      localStorage.setItem('pending_shortcode', code);
+    }
+  }, [params?.shortCode]);
 
   // Verify the introduction on mount
   useEffect(() => {

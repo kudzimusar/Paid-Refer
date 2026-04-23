@@ -50,6 +50,7 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => {
+      const pendingShortCode = localStorage.getItem('pending_shortcode');
       const payload = {
         ...data,
         customerId: user?.id,
@@ -60,7 +61,8 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
         additionalNotes: data.notes,
         bedrooms: String(bedrooms),
         country: country,
-        source: "web"
+        source: pendingShortCode ? "referral" : "web",
+        shortCode: pendingShortCode || undefined
       };
       delete (payload as any).preferredArea;
       delete (payload as any).amenities;
