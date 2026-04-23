@@ -40,13 +40,76 @@ export async function apiFetch<T>(
         createdAt: new Date().toISOString(),
       };
       
-      // Persist the request to simulate a "trail"
+      // Persist the request
       const existing = JSON.parse(localStorage.getItem("demo_requests") || "[]");
       localStorage.setItem("demo_requests", JSON.stringify([newRequest, ...existing]));
+      
+      // Update Referrer stats if in demo mode
+      const links = JSON.parse(localStorage.getItem("demo_links") || "[]");
+      if (links.length > 0) {
+        links[0].totalConversions = (links[0].totalConversions || 0) + 1;
+        links[0].totalEarningsUsd = (parseFloat(links[0].totalEarningsUsd || "0") + 5).toString();
+        localStorage.setItem("demo_links", JSON.stringify(links));
+        
+        // Add activity
+        const activity = JSON.parse(localStorage.getItem("demo_activity") || "[]");
+        activity.unshift({
+          id: "act_" + Date.now(),
+          type: "conversion",
+          message: "New conversion from your premium link!",
+          amount: 5,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem("demo_activity", JSON.stringify(activity.slice(0, 10)));
+      }
+
+      // Update Admin metrics
+      const adminMetrics = JSON.parse(localStorage.getItem("demo_admin_metrics") || "null");
+      if (adminMetrics) {
+        adminMetrics.newLeadsToday += 1;
+        adminMetrics.activeUsersNow += 1;
+        localStorage.setItem("demo_admin_metrics", JSON.stringify(adminMetrics));
+      }
       
       return { success: true, id: newRequest.id } as any;
     }
     
+    if (url === "/api/admin/metrics") {
+      let metrics = JSON.parse(localStorage.getItem("demo_admin_metrics") || "null");
+      if (!metrics) {
+        metrics = {
+          activeUsersNow: 42,
+          openConversations: 128,
+          pendingVerifications: 5,
+          openDisputes: 0,
+          newLeadsToday: 24,
+          dealsClosedToday: 8,
+          revenueToday: 1250,
+          health: { n8nStatus: "healthy", failedWorkflows: 0, unreadMessages: 3 }
+        };
+        localStorage.setItem("demo_admin_metrics", JSON.stringify(metrics));
+      }
+      return metrics as any;
+    }
+    
+    if (url === "/api/referrer/links") {
+      let links = JSON.parse(localStorage.getItem("demo_links") || "null");
+      if (!links) {
+        links = getMockReferralLinks();
+        localStorage.setItem("demo_links", JSON.stringify(links));
+      }
+      return links as any;
+    }
+
+    if (url === "/api/referrer/activity") {
+      let activity = JSON.parse(localStorage.getItem("demo_activity") || "null");
+      if (!activity) {
+        activity = getMockActivity();
+        localStorage.setItem("demo_activity", JSON.stringify(activity));
+      }
+      return activity as any;
+    }
+
     if (url === "/api/customer/leads") {
       const mockLeads = [...getMockAgentLeads()];
       const userRequests = JSON.parse(localStorage.getItem("demo_requests") || "[]");

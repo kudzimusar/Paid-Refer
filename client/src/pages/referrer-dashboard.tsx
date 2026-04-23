@@ -251,24 +251,12 @@ export default function ReferrerDashboard() {
 
   const { data: links = [], isLoading } = useQuery<ReferralLink[]>({
     queryKey: ["/api/referrer/links"],
-    queryFn: async () => {
-      if (isDemoMode()) {
-        await new Promise(r => setTimeout(r, 600));
-        return getMockReferralLinks() as ReferralLink[];
-      }
-      return apiRequest("GET", "/api/referrer/links");
-    },
+    queryFn: () => apiRequest("GET", "/api/referrer/links"),
   });
 
   const { data: activity = [] } = useQuery<MockActivity[]>({
     queryKey: ["referrer-activity"],
-    queryFn: async () => {
-      if (isDemoMode()) {
-        await new Promise(r => setTimeout(r, 300));
-        return getMockActivity();
-      }
-      return apiRequest("GET", "/api/referrer/activity");
-    },
+    queryFn: () => apiRequest("GET", "/api/referrer/activity"),
   });
 
   // Aggregate stats
