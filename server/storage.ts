@@ -22,6 +22,8 @@ import {
   type Notification,
   type InsertNotification,
   type CommissionSettlement,
+  type HouseOwnerProfile,
+  type InsertHouseOwnerProfile,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 
@@ -102,6 +104,12 @@ export interface IStorage {
   getSettlementsByPayer(payerId: string): Promise<CommissionSettlement[]>;
   getSettlementsByPayee(payeeId: string): Promise<CommissionSettlement[]>;
   updateSettlementStatus(id: string, status: string, evidenceUrl?: string): Promise<CommissionSettlement>;
+  
+  // House Owner
+  createHouseOwnerProfile(profile: InsertHouseOwnerProfile): Promise<HouseOwnerProfile>;
+  getHouseOwnerProfile(userId: string): Promise<HouseOwnerProfile | undefined>;
+  updateHouseOwnerProfile(userId: string, updates: Partial<HouseOwnerProfile>): Promise<HouseOwnerProfile>;
+  getPropertiesByHouseOwner(ownerId: string): Promise<Property[]>;
 }
 
 export class MemStorage implements IStorage {

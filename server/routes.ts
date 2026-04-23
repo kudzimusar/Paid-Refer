@@ -26,7 +26,8 @@ import {
   insertMessageSchema,
   insertPropertySchema,
   insertPaymentSchema,
-  insertNotificationSchema 
+  insertNotificationSchema,
+  insertGlobalAgentRegistrySchema
 } from "@shared/schema";
 import { 
   getUSSDSession, 
@@ -75,7 +76,8 @@ import {
   conversations,
   users,
   agentVerifications,
-  disputes
+  disputes,
+  globalAgentRegistry
 } from "@shared/schema.ts";
 import { type NextFunction, type Request, type Response } from "express";
 import { analyzePropertyPhoto } from "./lib/gemini-photos.ts";
@@ -91,6 +93,8 @@ import { computeMarketPulse } from "./lib/market-pulse";
 import { predictDealOutcome } from "./lib/deal-predictor";
 import { generateNeighbourhoodProfile } from "./lib/neighbourhood-intelligence";
 import { recalculateAgentTrustScore } from "./lib/trust-score";
+import { extractAgentsFromHTML, syncRegistryForArea } from "./lib/agent-discovery";
+import { generateNetworkAIInsights } from "./lib/ai-analytics";
 
 const upload = multer({
   dest: 'uploads/',
@@ -1786,6 +1790,47 @@ Empowering local agents & referrers.
     }
   });
 
+  // --- AGENT REGISTRY & DISCOVERY ---
+  app.get("/api/admin/agent-registry", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const registry = await db.select().from(globalAgentRegistry).orderBy(desc(globalAgentRegistry.lastSeenAt));
+      res.json(registry);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch registry" });
+    }
+  });
+
+  app.post("/api/admin/agent-registry/discover", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const { html, sourceUrl, country } = req.body;
+      if (!html || !sourceUrl) {
+        return res.status(400).json({ error: "HTML and Source URL required" });
+      }
+      const agents = await extractAgentsFromHTML(html, sourceUrl, country);
+      res.json({ success: true, count: agents.length, agents });
+    } catch (err) {
+      res.status(500).json({ error: "Discovery job failed" });
+    }
+  });
+
+  app.post("/api/admin/agent-registry/add", requireAuth, requireRole("admin"), validate(insertGlobalAgentRegistrySchema), async (req, res) => {
+    try {
+      const [entry] = await db.insert(globalAgentRegistry).values(req.body).returning();
+      res.json(entry);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to add agent to registry" });
+    }
+  });
+
+  app.get("/api/admin/network-insights", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const insights = await generateNetworkAIInsights();
+      res.json(insights);
+    } catch (err) {
+      res.status(500).json({ error: "AI Insights generation failed" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time messaging
@@ -1917,6 +1962,9 @@ Empowering local agents & referrers.
 
       const updated = await storage.updateSettlementStatus(id, 'paid', evidenceUrl);
       
+      // Trigger scoring update to reflect the payment
+      triggerAgentScoringUpdate(userId);
+
       // Notify the payee
       await storage.createNotification({
         userId: settlement.payeeId,

@@ -26,7 +26,7 @@ export const sessions = pgTable(
 );
 
 // Enums
-export const userRoleEnum = pgEnum('user_role', ['customer', 'agent', 'referrer', 'admin']);
+export const userRoleEnum = pgEnum('user_role', ['customer', 'agent', 'referrer', 'admin', 'house_owner']);
 export const requestStatusEnum = pgEnum('request_status', ['active', 'matched', 'completed', 'cancelled']);
 export const propertyTypeEnum = pgEnum('property_type', [
   // Japan
@@ -178,6 +178,20 @@ export const referrerProfiles = pgTable("referrer_profiles", {
   availableBalance: decimal("available_balance", { precision: 10, scale: 2 }).default('0.00'),
   totalReferrals: integer("total_referrals").default(0),
   successfulReferrals: integer("successful_referrals").default(0),
+  tier: text("tier").default("Bronze"), // Bronze, Silver, Gold, Platinum
+  rankProgress: integer("rank_progress").default(0), // 0-100% to next tier
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// House Owner profiles
+export const houseOwnerProfiles = pgTable("house_owner_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  totalProperties: integer("total_properties").default(0),
+  totalCashbackEarned: decimal("total_cashback_earned", { precision: 12, scale: 2 }).default('0.00'),
+  isVerified: boolean("is_verified").default(false),
+  verificationDocs: text("verification_docs").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -215,6 +229,8 @@ export const leads = pgTable("leads", {
   lastContactAt: timestamp("last_contact_at"),
   acceptedAt: timestamp("accepted_at"),
   closedAt: timestamp("closed_at"),
+  houseOwnerConfirmedAt: timestamp("house_owner_confirmed_at"),
+  houseOwnerCashbackAmount: decimal("house_owner_cashback_amount", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -248,6 +264,7 @@ export const messages = pgTable("messages", {
 export const properties = pgTable("properties", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agentId: varchar("agent_id").notNull().references(() => users.id),
+  houseOwnerId: varchar("house_owner_id").references(() => users.id),
   country: countryEnum("country").notNull(),
   city: varchar("city", { length: 64 }).notNull(),
   district: varchar("district", { length: 128 }),
@@ -318,8 +335,9 @@ export const agentScores = pgTable("agent_scores", {
   totalLeadsReceived: integer("total_leads_received").default(0),
   totalLeadsAccepted: integer("total_leads_accepted").default(0),
   totalDealsClosed: integer("total_deals_closed").default(0),
-  customerRatingAvg: decimal("customer_rating_avg", { precision: 3, scale: 2 }),
-  reliabilityIndex: decimal("reliability_index", { precision: 5, scale: 2 }), // Gemini synthesized
+  payoutReliabilityScore: decimal("payout_reliability_score", { precision: 5, scale: 2 }).default("100.00"),
+  customerRatingAvg: decimal("customer_rating_avg", { precision: 3, scale: 2 }).default("0.00"),
+  reliabilityIndex: decimal("reliability_index", { precision: 5, scale: 2 }).default("0.00"), // Gemini synthesized
   reliabilityLastCalculatedAt: timestamp("reliability_last_calculated_at"),
   scoreBand: leadScoreEnum("score_band").default("medium"), // low/medium/high/premium agent tier
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -410,6 +428,26 @@ export const agentPreRegistrations = pgTable("agent_pre_registrations", {
   country: countryEnum("country").default("ZW"),
   source: varchar("source").default("ussd"),
   status: varchar("status").default("ussd_pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ── GLOBAL AGENT REGISTRY (DISCOVERY) ──────────────────────
+export const globalAgentRegistry = pgTable("global_agent_registry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  agencyName: varchar("agency_name"),
+  licenseNumber: varchar("license_number"),
+  country: countryEnum("country").notNull().default("ZW"),
+  city: varchar("city"),
+  areasCovered: text("areas_covered").array(),
+  specializations: text("specializations").array(),
+  externalRating: decimal("external_rating", { precision: 3, scale: 2 }),
+  sourceUrl: text("source_url"), // URL where the agent was found
+  lastSeenAt: timestamp("last_seen_at").defaultNow(),
+  isPlatformUser: boolean("is_platform_user").default(false),
+  platformUserId: varchar("platform_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -632,6 +670,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [referrerProfiles.userId],
   }),
+  houseOwnerProfile: one(houseOwnerProfiles, {
+    fields: [users.id],
+    references: [houseOwnerProfiles.userId],
+  }),
   userProfile: one(userProfiles, {
     fields: [users.id],
     references: [userProfiles.userId],
@@ -642,6 +684,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   payments: many(payments),
   agentScores: one(agentScores),
   agentVerifications: many(agentVerifications),
+  globalRegistryEntry: one(globalAgentRegistry, {
+    fields: [users.id],
+    references: [globalAgentRegistry.platformUserId],
+  }),
   paymentTransactions: many(paymentTransactions),
   communicationLogs: many(communicationLogs),
   referrals: many(users, { relationName: 'referredBy' }),
@@ -951,6 +997,7 @@ export const insertCollaborationRequestSchema = createInsertSchema(collaboration
 export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, awardedAt: true });
 export const insertNeighbourhoodProfileSchema = createInsertSchema(neighbourhoodProfiles).omit({ id: true, lastUpdated: true });
 export const insertCompetitorPriceSchema = createInsertSchema(competitorPrices).omit({ id: true, scrapedAt: true });
+export const insertHouseOwnerProfileSchema = createInsertSchema(houseOwnerProfiles).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -995,10 +1042,17 @@ export type UserAchievement = typeof userAchievements.$inferSelect;
 export type NeighbourhoodProfile = typeof neighbourhoodProfiles.$inferSelect;
 export type CompetitorPrice = typeof competitorPrices.$inferSelect;
 export type CommissionSettlement = typeof commissionSettlements.$inferSelect;
+export type HouseOwnerProfile = typeof houseOwnerProfiles.$inferSelect;
+export type GlobalAgentRegistry = typeof globalAgentRegistry.$inferSelect;
 
 export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
   id: true,
   fetchedAt: true,
+});
+
+export const insertGlobalAgentRegistrySchema = createInsertSchema(globalAgentRegistry).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertAgentAvailabilitySchema = createInsertSchema(agentAvailability).omit({
@@ -1046,3 +1100,4 @@ export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type InsertCommissionSettlement = z.infer<typeof insertCommissionSettlementSchema>;
+export type InsertHouseOwnerProfile = z.infer<typeof insertHouseOwnerProfileSchema>;

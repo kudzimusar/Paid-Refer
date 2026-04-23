@@ -1,5 +1,5 @@
 import { db } from "../db.ts";
-import { agentScores, leads, agentProfiles } from "../../shared/schema.ts";
+import { agentScores, leads, agentProfiles, commissionSettlements } from "../../shared/schema.ts";
 import { eq, and, sql, desc } from "drizzle-orm";
 
 /**
@@ -48,13 +48,25 @@ export async function calculateAgentScore(agentId: string) {
       ? Math.round(totalResponseTime / (totalLeadsAccepted * 60 * 1000))
       : null;
 
-    // 5. Fetch Customer Rating from Agent Profile (updated via surveys elsewhere)
+    // 5. Fetch Settlement Reliability
+    // Penalty for unpaid settlements > 72 hours
+    const settlements = await db.select().from(commissionSettlements).where(eq(commissionSettlements.payerId, agentId));
+    const pendingSettlements = settlements.filter(s => s.status !== 'paid');
+    const overdueSettlements = pendingSettlements.filter(s => {
+      const diff = Date.now() - new Date(s.createdAt!).getTime();
+      return diff > (72 * 60 * 60 * 1000);
+    }).length;
+
+    // Reliability score starts at 100, drops by 10 per overdue settlement
+    const payoutReliabilityScore = Math.max(0, 100 - (overdueSettlements * 10));
+
+    // 6. Fetch Customer Rating from Agent Profile
     const [profile] = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, agentId));
     const customerRatingAvg = parseFloat(profile?.rating || "0");
 
-    // 6. Synthesize Reliability Index (0-100)
-    // Weights: Response Rate (40%), Conversion (40%), Rating (20%)
-    const weightedScore = (responseRateScore * 0.4) + (conversionRate * 0.4) + (customerRatingAvg * 20 * 0.2);
+    // 7. Synthesize Reliability Index (0-100)
+    // Weights: Response Rate (30%), Conversion (30%), Rating (20%), Payout Reliability (20%)
+    const weightedScore = (responseRateScore * 0.3) + (conversionRate * 0.3) + (customerRatingAvg * 20 * 0.2) + (payoutReliabilityScore * 0.2);
     const reliabilityIndex = Math.min(Math.max(weightedScore, 0), 100);
 
     // 7. Update or Insert into agent_scores
@@ -69,6 +81,7 @@ export async function calculateAgentScore(agentId: string) {
           totalLeadsReceived,
           totalLeadsAccepted,
           totalDealsClosed,
+          payoutReliabilityScore: payoutReliabilityScore.toString(),
           customerRatingAvg: customerRatingAvg.toString(),
           reliabilityIndex: reliabilityIndex.toString(),
           reliabilityLastCalculatedAt: new Date(),
@@ -84,6 +97,7 @@ export async function calculateAgentScore(agentId: string) {
         totalLeadsReceived,
         totalLeadsAccepted,
         totalDealsClosed,
+        payoutReliabilityScore: payoutReliabilityScore.toString(),
         customerRatingAvg: customerRatingAvg.toString(),
         reliabilityIndex: reliabilityIndex.toString(),
         reliabilityLastCalculatedAt: new Date(),

@@ -33,6 +33,7 @@ import ReferrerLinksPage from "@/pages/referrer-links";
 import NotificationsPage from "@/pages/notifications";
 import ProfilePage from "@/pages/profile";
 import AcademyPage from "@/pages/academy";
+import AdminAgentRegistryPage from "@/pages/admin-agent-registry";
 
 
 // Lazy-load less-critical pages
@@ -140,6 +141,7 @@ function AppContent() {
             <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer"]} component={SettingsPaymentsPage} />
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
             <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin/registry" roles={["admin"]} component={AdminAgentRegistryPage} />
 
 
             {/* ── Customer ── */}

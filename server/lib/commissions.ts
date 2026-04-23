@@ -1,7 +1,8 @@
 import { storage } from "../storage";
 import { db } from "../db";
 import { eq, sql } from "drizzle-orm";
-import { users, leads, commissionSettlements, referrerProfiles } from "@shared/schema";
+import { users, leads, commissionSettlements, referrerProfiles, agentScores } from "@shared/schema";
+import { triggerAgentScoringUpdate } from "./agent-scoring";
 
 /**
  * Calculates and creates tiered commission settlements for a closed deal.
@@ -25,41 +26,56 @@ export async function processTieredCommissions(dealId: string) {
     // 2. Get the referral chain (up to 3 levels)
     const chain = await storage.getReferralChain(customer.id, 3);
     
-    // 3. Define commission structure (fixed for now, could be dynamic)
-    // Level 1: $10, Level 2: $3, Level 3: $2
-    const tiers = [
-      { amount: "10.00", label: "Direct Referral" },
-      { amount: "3.00", label: "Network Level 2" },
-      { amount: "2.00", label: "Network Level 3" }
-    ];
-
-    // 4. Create settlements
-    // Since users distribute amongst themselves, we need to decide WHO pays.
-    // If the Agent is the one getting the deal, the Agent should probably be the payer.
+    // 3. Define commission structure based on tier
+    // We'll fetch the tier for each person in the chain
     const payerId = lead.agentId;
 
     for (let i = 0; i < chain.length; i++) {
       const referrer = chain[i];
-      const tier = tiers[i];
+      const profile = await storage.getReferrerProfile(referrer.id);
       
-      if (!tier) break;
+      let amount = "0.00";
+      let label = "";
+      
+      if (i === 0) { // Direct
+        const base = 10;
+        const bonus = profile?.tier === 'Gold' ? 2 : profile?.tier === 'Silver' ? 1 : 0;
+        amount = (base + bonus).toFixed(2);
+        label = `Direct Referral (${profile?.tier || 'Bronze'})`;
+      } else if (i === 1) { // L2
+        amount = profile?.tier === 'Gold' ? "4.00" : "3.00";
+        label = `Network Level 2 (${profile?.tier || 'Bronze'})`;
+      } else { // L3
+        amount = profile?.tier === 'Gold' ? "3.00" : "2.00";
+        label = `Network Level 3 (${profile?.tier || 'Bronze'})`;
+      }
 
       await storage.createCommissionSettlement({
         dealId,
         payerId,
         payeeId: referrer.id,
-        amount: tier.amount,
+        amount,
         currency: "USD",
         level: i + 1,
         status: "pending",
       });
 
-      // Update referrer profile stats
-      const profile = await storage.getReferrerProfile(referrer.id);
+      // Update referrer profile stats and progress
       if (profile) {
+        const newEarnings = parseFloat(profile.totalEarnings || "0") + parseFloat(amount);
+        const newReferrals = (profile.successfulReferrals || 0) + 1;
+        
+        // Tier upgrade logic
+        let tier = profile.tier || 'Bronze';
+        if (newReferrals >= 50) tier = 'Platinum';
+        else if (newReferrals >= 20) tier = 'Gold';
+        else if (newReferrals >= 5) tier = 'Silver';
+
         await storage.updateReferrerProfile(referrer.id, {
-          totalEarnings: (parseFloat(profile.totalEarnings || "0") + parseFloat(tier.amount)).toFixed(2),
-          successfulReferrals: (profile.successfulReferrals || 0) + 1,
+          totalEarnings: newEarnings.toFixed(2),
+          successfulReferrals: newReferrals,
+          tier,
+          rankProgress: Math.min(100, (newReferrals % 5) * 20), // Simple progress tracker
         });
       }
 
@@ -67,7 +83,7 @@ export async function processTieredCommissions(dealId: string) {
       await storage.createNotification({
         userId: referrer.id,
         title: "New Commission Earned!",
-        body: `You earned $${tier.amount} from a ${tier.label}. Settlement pending from agent.`,
+        body: `You earned $${amount} from a ${label}. Settlement pending from agent.`,
         type: "payment",
       });
     }
@@ -76,9 +92,12 @@ export async function processTieredCommissions(dealId: string) {
     await storage.createNotification({
       userId: payerId,
       title: "Commissions Due",
-      body: `Deal closed! You have ${chain.length} referral commissions to settle with the network.`,
+      body: `Deal closed! You have ${chain.length} referral commissions to settle with the network. Pay promptly to boost your Agent Score!`,
       type: "payment",
     });
+
+    // Trigger initial scoring (payout reliability will be checked next time)
+    triggerAgentScoringUpdate(payerId);
 
   } catch (error) {
     console.error("Error processing tiered commissions:", error);

@@ -14,7 +14,10 @@ import {
   Database,
   Search,
   Zap,
-  LayoutDashboard
+  LayoutDashboard,
+  BrainCircuit,
+  Globe,
+  Compass
 } from "lucide-react";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { NavLogo } from "@/components/ui/Logo";
@@ -42,6 +45,11 @@ export default function AdminDashboard() {
     refetchInterval: 30000, // Refresh every 30s
   });
 
+  const { data: aiInsights } = useQuery<any>({
+    queryKey: ["/api/admin/network-insights"],
+    queryFn: () => apiRequest("GET", "/api/admin/network-insights"),
+  });
+
   if (isLoading || !metrics) {
     return (
       <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
@@ -61,6 +69,7 @@ export default function AdminDashboard() {
             <nav className="hidden md:flex items-center gap-6">
               <NavLink label="System Pulse" active icon={<Activity />} />
               <NavLink label="Operations" icon={<Users />} />
+              <NavLink label="Registry" icon={<Database />} onClick={() => window.location.href = "/admin/registry"} />
               <NavLink label="Financials" icon={<CreditCard />} />
               <NavLink label="Guard" icon={<ShieldCheck />} />
             </nav>
@@ -144,34 +153,77 @@ export default function AdminDashboard() {
               </div>
             </PremiumCard>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <PremiumCard className="bg-neutral-800/40 border-neutral-800 p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <Database className="w-4 h-4 text-primary" />
-                    Automation Health
-                  </h3>
-                  <RefreshBadge />
-                </div>
-                <div className="space-y-4">
-                  <HealthRow label="n8n Engines" status="healthy" value="3 Active" />
-                  <HealthRow label="Stripe Webhooks" status="healthy" value="Operational" />
-                  <HealthRow label="Gemini IQ" status="degraded" value="Rate Limited" />
-                </div>
-              </PremiumCard>
-
-              <PremiumCard className="bg-neutral-800/40 border-neutral-800 p-6 space-y-4">
-                <h3 className="font-bold flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-400" />
-                  Conversion Funnel
-                </h3>
-                <div className="space-y-6 pt-2">
-                  <FunnelBar label="Link Click → Submit" percent={42} />
-                  <FunnelBar label="Submit → Agent Match" percent={88} />
-                  <FunnelBar label="Match → Deal Closed" percent={12} />
-                </div>
-              </PremiumCard>
             </div>
+
+            {/* AI Network Oversight Panel */}
+            <PremiumCard className="bg-neutral-800/40 border-neutral-800 overflow-hidden">
+              <div className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b border-neutral-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <BrainCircuit className="text-primary w-5 h-5" />
+                    AI Network Oversight
+                  </h3>
+                  <p className="text-xs text-neutral-400">Heuristic analysis of the referral pyramid & agent behavior</p>
+                </div>
+                {aiInsights && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-neutral-500">Network Health</span>
+                    <div className="bg-neutral-900 rounded-lg px-2 py-1 flex items-center gap-2 border border-white/5">
+                      <div className={`h-2 w-2 rounded-full ${aiInsights.networkHealth > 70 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <span className="text-sm font-bold text-white">{aiInsights.networkHealth}%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">Executive Summary</h4>
+                    <p className="text-sm text-neutral-200 leading-relaxed italic">
+                      "{aiInsights?.executiveSummary || "Analyzing network nodes and financial distributions..."}"
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-3">Strategic Opportunities</h4>
+                    <div className="space-y-3">
+                      {aiInsights?.topOpportunities?.map((opp: string, i: number) => (
+                        <div key={i} className="flex items-start gap-3 bg-neutral-900/50 p-3 rounded-xl border border-white/5">
+                          <Compass className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <p className="text-xs text-neutral-300">{opp}</p>
+                        </div>
+                      )) || <div className="h-20 animate-pulse bg-neutral-800 rounded-xl" />}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-neutral-900/50 rounded-2xl p-6 border border-white/5">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4 flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Risk Factors Identified
+                    </h4>
+                    <div className="space-y-4">
+                      {aiInsights?.riskFactors?.map((risk: string, i: number) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-xs text-neutral-400">{risk}</span>
+                          <span className="text-[10px] font-black bg-red-900/20 text-red-400 px-2 py-0.5 rounded uppercase">High Risk</span>
+                        </div>
+                      )) || <p className="text-xs text-neutral-500">No critical anomalies detected.</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/20">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Growth Projection</p>
+                      <p className="text-xl font-black text-white">{aiInsights?.growthProjection || "--"}</p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-primary opacity-50" />
+                  </div>
+                </div>
+              </div>
+            </PremiumCard>
           </div>
 
           {/* Right Sidebar */}
@@ -225,9 +277,12 @@ export default function AdminDashboard() {
   );
 }
 
-function NavLink({ label, active, icon }: { label: string; active?: boolean; icon: React.ReactNode }) {
+function NavLink({ label, active, icon, onClick }: { label: string; active?: boolean; icon: React.ReactNode; onClick?: () => void }) {
   return (
-    <button className={`flex items-center gap-2 text-sm font-bold transition-all ${active ? 'text-primary' : 'text-neutral-500 hover:text-neutral-300'}`}>
+    <button 
+      onClick={onClick}
+      className={`flex items-center gap-2 text-sm font-bold transition-all ${active ? 'text-primary' : 'text-neutral-500 hover:text-neutral-300'}`}
+    >
       <span className="w-4 h-4">{icon}</span>
       {label}
     </button>

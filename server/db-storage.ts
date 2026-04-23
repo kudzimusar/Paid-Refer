@@ -22,6 +22,8 @@ import {
   type InsertNotification,
   type CommissionSettlement,
   type InsertCommissionSettlement,
+  type HouseOwnerProfile,
+  type InsertHouseOwnerProfile,
   users,
   customerRequests,
   agentProfiles,
@@ -37,6 +39,7 @@ import {
   workflowLogs,
   agentPreRegistrations,
   balances,
+  houseOwnerProfiles,
 } from "@shared/schema";
 import { db } from "./db.ts";
 import { eq, or, and, sql } from "drizzle-orm";
@@ -347,6 +350,26 @@ export class DatabaseStorage implements IStorage {
     
     const [updated] = await db.update(commissionSettlements).set(updates).where(eq(commissionSettlements.id, id)).returning();
     return updated;
+  }
+
+  // House Owner
+  async createHouseOwnerProfile(profile: InsertHouseOwnerProfile): Promise<HouseOwnerProfile> {
+    const [created] = await db.insert(houseOwnerProfiles).values(profile).returning();
+    return created;
+  }
+
+  async getHouseOwnerProfile(userId: string): Promise<HouseOwnerProfile | undefined> {
+    const [profile] = await db.select().from(houseOwnerProfiles).where(eq(houseOwnerProfiles.userId, userId));
+    return profile;
+  }
+
+  async updateHouseOwnerProfile(userId: string, updates: Partial<HouseOwnerProfile>): Promise<HouseOwnerProfile> {
+    const [updated] = await db.update(houseOwnerProfiles).set({ ...updates, updatedAt: new Date() }).where(eq(houseOwnerProfiles.userId, userId)).returning();
+    return updated;
+  }
+
+  async getPropertiesByHouseOwner(ownerId: string): Promise<Property[]> {
+    return db.select().from(properties).where(eq(properties.houseOwnerId, ownerId));
   }
 }
 
