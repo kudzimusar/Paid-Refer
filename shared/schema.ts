@@ -191,6 +191,8 @@ export const houseOwnerProfiles = pgTable("house_owner_profiles", {
   totalProperties: integer("total_properties").default(0),
   totalCashbackEarned: decimal("total_cashback_earned", { precision: 12, scale: 2 }).default('0.00'),
   isVerified: boolean("is_verified").default(false),
+  isCompany: boolean("is_company").default(false),
+  companyName: text("company_name"),
   verificationDocs: text("verification_docs").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

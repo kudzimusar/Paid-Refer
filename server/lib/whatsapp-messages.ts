@@ -1,5 +1,13 @@
 import { sendWhatsApp } from "./brevo-whatsapp";
 
+export async function sendWhatsAppMessage(to: string, body: string) {
+  return sendWhatsApp({
+    type: "text",
+    to,
+    body,
+  });
+}
+
 // ── CUSTOMER FLOWS ────────────────────────────────────────────────
 
 // 1. Lead submitted — instant confirmation to customer

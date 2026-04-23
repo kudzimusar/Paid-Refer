@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Home, Users, Building, MessageCircle, User,
   TrendingUp, Link2, Banknote, Bell, LayoutDashboard,
-  BarChart3, Shield, Settings, BookOpen
+  BarChart3, Shield, Settings, BookOpen, Wallet
 } from "lucide-react";
 
 interface NavItem {

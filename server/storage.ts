@@ -118,6 +118,7 @@ export class MemStorage implements IStorage {
   private agentProfiles: Map<string, AgentProfile> = new Map();
   private referrerProfiles: Map<string, ReferrerProfile> = new Map();
   private referralLinks: Map<string, ReferralLink> = new Map();
+  private houseOwnerProfiles: Map<string, HouseOwnerProfile> = new Map();
   private leads: Map<string, Lead> = new Map();
   private conversations: Map<string, Conversation> = new Map();
   private messages: Map<string, Message> = new Map();
@@ -287,6 +288,8 @@ export class MemStorage implements IStorage {
       availableBalance: "0.00",
       totalReferrals: 0,
       successfulReferrals: 0,
+      tier: "Bronze",
+      rankProgress: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -368,6 +371,8 @@ export class MemStorage implements IStorage {
       lastContactAt: null,
       acceptedAt: null,
       closedAt: null,
+      houseOwnerConfirmedAt: null,
+      houseOwnerCashbackAmount: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -506,6 +511,7 @@ export class MemStorage implements IStorage {
       aiAmenityTags: property.aiAmenityTags ?? [],
       viewCount: 0,
       firestoreId: property.firestoreId ?? null,
+      houseOwnerId: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -655,6 +661,42 @@ export class MemStorage implements IStorage {
   }
   async updateSettlementStatus(id: string, status: string, evidenceUrl?: string): Promise<CommissionSettlement> {
     return {} as CommissionSettlement;
+  }
+
+  // House Owner
+  async createHouseOwnerProfile(profile: InsertHouseOwnerProfile): Promise<HouseOwnerProfile> {
+    const id = nanoid();
+    const now = new Date();
+    const created: HouseOwnerProfile = {
+      id,
+      userId: profile.userId,
+      totalProperties: profile.totalProperties ?? 0,
+      totalCashbackEarned: profile.totalCashbackEarned ?? "0.00",
+      isVerified: profile.isVerified ?? false,
+      isCompany: profile.isCompany ?? false,
+      companyName: profile.companyName ?? null,
+      verificationDocs: profile.verificationDocs ?? [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.houseOwnerProfiles.set(profile.userId, created);
+    return created;
+  }
+
+  async getHouseOwnerProfile(userId: string): Promise<HouseOwnerProfile | undefined> {
+    return this.houseOwnerProfiles.get(userId);
+  }
+
+  async updateHouseOwnerProfile(userId: string, updates: Partial<HouseOwnerProfile>): Promise<HouseOwnerProfile> {
+    const profile = this.houseOwnerProfiles.get(userId);
+    if (!profile) throw new Error("House owner profile not found");
+    const updated = { ...profile, ...updates, updatedAt: new Date() };
+    this.houseOwnerProfiles.set(userId, updated);
+    return updated;
+  }
+
+  async getPropertiesByHouseOwner(ownerId: string): Promise<Property[]> {
+    return Array.from(this.properties.values()).filter(p => p.houseOwnerId === ownerId);
   }
 }
 

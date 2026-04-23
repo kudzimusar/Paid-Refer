@@ -58,7 +58,7 @@ import { dbStorage } from "./db-storage.ts";
 import { initiateMobilePayment, checkPaymentStatus, updatePaynowTransaction } from "./lib/paynow.ts";
 import { triggerAgentScoringUpdate } from "./lib/agent-scoring.ts";
 import { createConversation } from "./lib/firestore-chat";
-import { and, eq, desc, sql, inArray } from "drizzle-orm";
+import { and, eq, desc, sql, inArray, or } from "drizzle-orm";
 import { processTieredCommissions, processHouseOwnerCashback } from "./lib/commissions";
 import { db } from "./db.ts";
 import {
@@ -1162,11 +1162,12 @@ Empowering local agents & referrers.
       
       const profile = await storage.createHouseOwnerProfile({
         userId,
-        propertyCount: propertyCount || 0,
+        totalProperties: propertyCount || 0,
         isCompany: !!isCompany,
-        companyName,
+        companyName: companyName || null,
         isVerified: false,
         totalCashbackEarned: "0.00",
+        verificationDocs: [],
       });
 
       await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
@@ -1224,7 +1225,7 @@ Empowering local agents & referrers.
     }
   });
 
-  app.get('/api/house-owner/search', requireAuth, requireRole(['agent', 'admin']), async (req: any, res) => {
+  app.get('/api/house-owner/search', requireAuth, requireRole('agent', 'admin'), async (req: any, res) => {
     try {
       const { query } = req.query;
       if (!query || typeof query !== 'string') {

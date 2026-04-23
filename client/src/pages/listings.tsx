@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play, Share2, Search, User } from "lucide-react";
+import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play, Share2, Search, User, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
