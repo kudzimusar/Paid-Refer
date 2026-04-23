@@ -28,6 +28,8 @@ import ListingsPage from "@/pages/listings";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SettingsPaymentsPage from "@/pages/settings-payments";
 import ReferrerLinksPage from "@/pages/referrer-links";
+import NotificationsPage from "@/pages/notifications";
+import ProfilePage from "@/pages/profile";
 
 
 // Lazy-load less-critical pages
@@ -118,6 +120,9 @@ function AppContent() {
           <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
           <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
           <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
+          <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
+          <ProtectedRoute path="/profile" roles={["customer", "referrer"]} component={ProfilePage} />
+          <ProtectedRoute path="/profilepage" roles={["customer", "referrer"]} component={ProfilePage} />
 
           {/* ── Referrer ── */}
           <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
