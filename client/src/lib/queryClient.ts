@@ -240,7 +240,8 @@ export async function apiFetch<T>(
 
   if (res.status === 401) {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.location.href = baseUrl + "/login";
     throw new Error("Unauthorized");
   }
 

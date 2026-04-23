@@ -104,7 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setToken(null);
     setUser(null);
-    window.location.href = "/login";
+    const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.location.href = baseUrl + "/login";
   }
 
   async function refreshUser() {

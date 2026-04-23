@@ -42,7 +42,7 @@ export default function ProfilePage() {
             <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none font-bold px-3 py-1 rounded-lg">
               PREMIUM INVESTOR
             </Badge>
-            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.id.slice(0, 8)}</span>
+            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.userId.slice(0, 8)}</span>
           </div>
           
           <div className="grid grid-cols-3 gap-4 mt-10 w-full">
