@@ -42,6 +42,18 @@ const ROLES = [
     features: ["AI-generated links", "Track conversions", "Earn commissions"],
   },
   {
+    id: "house_owner",
+    label: "House Owner",
+    sub: "I have properties to list",
+    icon: Home,
+    color: "text-amber-600",
+    iconBg: "bg-amber-50",
+    ring: "ring-amber-500",
+    border: "border-amber-500",
+    bg: "bg-amber-50",
+    features: ["Earn cashback on deals", "Verify closures", "Track property earnings"],
+  },
+  {
     id: "admin",
     label: "Administrator",
     sub: "Platform operations team",

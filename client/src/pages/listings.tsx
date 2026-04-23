@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play, Share2 } from "lucide-react";
+import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play, Share2, Search, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
@@ -325,6 +325,12 @@ function AddListingModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     bedrooms: 1,
     sizeSqm: "",
     photoUrls: [] as string[],
+    houseOwnerId: null as string | null,
+  });
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const { data: ownerResults = [] } = useQuery<any[]>({
+    queryKey: ["/api/house-owner/search", ownerSearch],
+    enabled: ownerSearch.length > 2,
   });
 
   const handleSubmit = async () => {
@@ -444,19 +450,72 @@ function AddListingModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   />
                 </div>
               </div>
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest pl-1">Bedrooms</label>
-                <div className="flex gap-2">
-                  {[0, 1, 2, 3, 4].map(num => (
-                    <button 
-                      key={num}
-                      onClick={() => setFormData({...formData, bedrooms: num})}
-                      className={`flex-1 py-3 rounded-xl font-bold transition-all ${formData.bedrooms === num ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100'}`}
-                    >
-                      {num === 0 ? 'Stu' : `${num}BR`}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest pl-1">Property Owner (Cashback Eligibility)</label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input 
+                    className="w-full bg-neutral-50 border-none rounded-2xl pl-12 pr-5 py-4 text-sm font-semibold focus:ring-2 focus:ring-primary/20 outline-none" 
+                    placeholder="Search by name or phone..."
+                    value={ownerSearch}
+                    onChange={e => setOwnerSearch(e.target.value)}
+                  />
+                </div>
+
+                <AnimatePresence>
+                  {ownerResults.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden max-h-40 overflow-y-auto"
+                    >
+                      {ownerResults.map(owner => (
+                        <button 
+                          key={owner.id}
+                          onClick={() => {
+                            setFormData({...formData, houseOwnerId: owner.id});
+                            setOwnerSearch(`${owner.firstName} ${owner.lastName}`);
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between hover:bg-blue-50 transition-colors ${formData.houseOwnerId === owner.id ? 'bg-blue-50' : ''}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
+                              {owner.firstName[0]}
+                            </div>
+                            <div>
+                              <p className="font-bold text-neutral-900">{owner.firstName} {owner.lastName}</p>
+                              <p className="text-[10px] text-neutral-500">{owner.phone}</p>
+                            </div>
+                          </div>
+                          {formData.houseOwnerId === owner.id && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {formData.houseOwnerId && (
+                  <div className="bg-emerald-50 rounded-2xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-emerald-800">Owner Assigned</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setFormData({...formData, houseOwnerId: null});
+                        setOwnerSearch("");
+                      }}
+                      className="text-[10px] font-bold text-emerald-700 underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

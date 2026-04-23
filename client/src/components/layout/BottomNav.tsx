@@ -45,6 +45,14 @@ const ADMIN_NAV: NavItem[] = [
   { icon: BookOpen, label: "Academy", href: "/academy" },
 ];
 
+const HOUSE_OWNER_NAV: NavItem[] = [
+  { icon: LayoutDashboard, label: "Home", href: "/house-owner" },
+  { icon: Building, label: "Properties", href: "/house-owner/properties" },
+  { icon: Bell, label: "Alerts", href: "/notifications" },
+  { icon: Wallet, label: "Cashback", href: "/dashboard/settings/payments" },
+  { icon: User, label: "Profile", href: "/profile" },
+];
+
 const gridColsMap: Record<number, string> = {
   1: "grid-cols-1",
   2: "grid-cols-2",
@@ -65,6 +73,7 @@ export function BottomNav() {
     agent: AGENT_NAV,
     referrer: REFERRER_NAV,
     admin: ADMIN_NAV,
+    house_owner: HOUSE_OWNER_NAV,
   };
 
   const items = navMap[user.role || "customer"] ?? CUSTOMER_NAV;
@@ -74,7 +83,7 @@ export function BottomNav() {
       <div className={cn("grid h-full max-w-lg mx-auto", gridColsMap[items.length] || "grid-cols-4")}>
         {items.map((item) => {
           // Strict matching for top-level hubs to prevent double-highlights
-          const isTopLevelHub = ["/refer", "/dashboard", "/search", "/profile"].includes(item.href);
+          const isTopLevelHub = ["/refer", "/dashboard", "/search", "/profile", "/house-owner"].includes(item.href);
           const isActive = isTopLevelHub 
             ? location === item.href 
             : location === item.href || (location.startsWith(item.href) && item.href !== "/");

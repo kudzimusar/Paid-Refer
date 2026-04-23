@@ -59,7 +59,7 @@ import { initiateMobilePayment, checkPaymentStatus, updatePaynowTransaction } fr
 import { triggerAgentScoringUpdate } from "./lib/agent-scoring.ts";
 import { createConversation } from "./lib/firestore-chat";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
-import { processTieredCommissions } from "./lib/commissions";
+import { processTieredCommissions, processHouseOwnerCashback } from "./lib/commissions";
 import { db } from "./db.ts";
 import {
   leads,
@@ -804,6 +804,18 @@ Empowering local agents & referrers.
           processTieredCommissions(lead.id).catch(err => {
             console.error("Tiered commission processing failed:", err);
           });
+
+          // Notify house owner if property is linked
+          const [property] = await db.select().from(properties).where(eq(properties.agentId, lead.agentId)); // Simplified lookup
+          if (property?.houseOwnerId) {
+            await storage.createNotification({
+              userId: property.houseOwnerId,
+              title: "Deal Closed - Confirm for Cashback",
+              body: `The agent marked a deal for ${property.title} as closed. Confirm it in your dashboard to receive your cashback!`,
+              type: "system",
+              data: { leadId: lead.id }
+            });
+          }
         }
       }
       
@@ -1141,6 +1153,111 @@ Empowering local agents & referrers.
       res.status(500).json({ message: "Failed to upload file" });
     }
   });
+
+  // --- HOUSE OWNER ROUTES ---
+  app.post('/api/house-owner/profile', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { propertyCount, isCompany, companyName } = req.body;
+      
+      const profile = await storage.createHouseOwnerProfile({
+        userId,
+        propertyCount: propertyCount || 0,
+        isCompany: !!isCompany,
+        companyName,
+        isVerified: false,
+        totalCashbackEarned: "0.00",
+      });
+
+      await storage.updateUser(userId, { onboardingStatus: 'role_specific' });
+      res.json(profile);
+    } catch (error) {
+      console.error("Error creating house owner profile:", error);
+      res.status(500).json({ message: "Failed to create profile" });
+    }
+  });
+
+  app.get('/api/house-owner/properties', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const propertiesList = await storage.getPropertiesByHouseOwner(userId);
+      res.json(propertiesList);
+    } catch (error) {
+      console.error("Error fetching owned properties:", error);
+      res.status(500).json({ message: "Failed to fetch properties" });
+    }
+  });
+
+  app.post('/api/house-owner/confirm-deal', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { leadId } = req.body;
+
+      const lead = await storage.getLead(leadId);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+
+      // Security Check: Does the user own the property in this lead?
+      // Simplified check: Find property assigned to the agent of this lead
+      const [property] = await db.select().from(properties).where(eq(properties.agentId, lead.agentId));
+      if (!property || property.houseOwnerId !== userId) {
+        return res.status(403).json({ message: "Unauthorized: You do not own the property for this deal" });
+      }
+
+      if (lead.houseOwnerConfirmedAt) {
+        return res.status(400).json({ message: "Deal already confirmed" });
+      }
+
+      // Update lead confirmation
+      const updatedLead = await storage.updateLead(leadId, {
+        houseOwnerConfirmedAt: new Date()
+      });
+
+      // Trigger cashback settlement
+      await processHouseOwnerCashback(leadId);
+
+      res.json({ success: true, lead: updatedLead });
+    } catch (error) {
+      console.error("Error confirming deal:", error);
+      res.status(500).json({ message: "Failed to confirm deal" });
+    }
+  });
+
+  app.get('/api/house-owner/search', requireAuth, requireRole(['agent', 'admin']), async (req: any, res) => {
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query required" });
+      }
+
+      // Search for users with role 'house_owner' matching name or phone
+      const results = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phone: users.phone,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.role, 'house_owner'),
+          or(
+            sql`${users.firstName} ILIKE ${'%' + query + '%'}`,
+            sql`${users.lastName} ILIKE ${'%' + query + '%'}`,
+            sql`${users.phone} ILIKE ${'%' + query + '%'}`
+          )
+        )
+      )
+      .limit(10);
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching house owners:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
 
   // Notification routes
   app.get('/api/notifications', requireAuth, async (req: any, res) => {

@@ -34,6 +34,7 @@ import NotificationsPage from "@/pages/notifications";
 import ProfilePage from "@/pages/profile";
 import AcademyPage from "@/pages/academy";
 import AdminAgentRegistryPage from "@/pages/admin-agent-registry";
+import HouseOwnerDashboard from "@/pages/HouseOwnerDashboard";
 
 
 // Lazy-load less-critical pages
@@ -92,6 +93,7 @@ function ProtectedRoute({ path, roles, component: Component }: {
     customer: "/search",
     referrer: "/refer",
     admin: "/admin",
+    house_owner: "/house-owner",
   };
 
   return (
@@ -155,6 +157,9 @@ function AppContent() {
             {/* ── Referrer ── */}
             <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
             <ProtectedRoute path="/refer/links" roles={["referrer"]} component={ReferrerLinksPage} />
+
+            {/* ── House Owner ── */}
+            <ProtectedRoute path="/house-owner" roles={["house_owner"]} component={HouseOwnerDashboard} />
 
             {/* ── 404 ── */}
             <Route component={NotFoundPage} />

@@ -1,7 +1,7 @@
 import { storage } from "../storage";
 import { db } from "../db";
 import { eq, sql } from "drizzle-orm";
-import { users, leads, commissionSettlements, referrerProfiles, agentScores } from "@shared/schema";
+import { users, leads, commissionSettlements, referrerProfiles, agentScores, properties } from "@shared/schema";
 import { triggerAgentScoringUpdate } from "./agent-scoring";
 
 /**
@@ -101,5 +101,81 @@ export async function processTieredCommissions(dealId: string) {
 
   } catch (error) {
     console.error("Error processing tiered commissions:", error);
+  }
+}
+
+/**
+ * Calculates and creates a cashback settlement for the house owner.
+ * @param dealId The ID of the closed lead/deal
+ */
+export async function processHouseOwnerCashback(dealId: string) {
+  try {
+    const lead = await storage.getLead(dealId);
+    if (!lead || !lead.houseOwnerConfirmedAt) {
+      console.warn(`Cannot process cashback for deal ${dealId}: Lead not found or not confirmed by owner.`);
+      return;
+    }
+
+    // Find the property associated with this lead
+    // We assume the customer request is linked to a property, or the agent assigned one.
+    // Let's check the tenancy record if it exists, or look up via propertyId in customerRequest/leads if added.
+    // For now, we'll try to find the property from the lead's metadata or associated customer request.
+    const request = await storage.getCustomerRequest(lead.requestId);
+    if (!request) return;
+
+    // In a real scenario, the lead would be linked to a specific property. 
+    // We'll search for properties assigned to this agent that match the request criteria, 
+    // or assume the agent selected one during the closure.
+    // For this implementation, we'll look for properties where the houseOwnerId is set and linked to this lead.
+    
+    const [property] = await db.select().from(properties).where(eq(properties.agentId, lead.agentId)); // Simplified for demo
+    if (!property || !property.houseOwnerId) {
+      console.info(`No house owner found for property in deal ${dealId}`);
+      return;
+    }
+
+    const amount = calculateHouseOwnerCashback(property.price?.toString() || "0", property.priceType || "monthly");
+    
+    await storage.createCommissionSettlement({
+      dealId,
+      payerId: lead.agentId, // Agent pays the cashback (from their commission)
+      payeeId: property.houseOwnerId,
+      amount,
+      currency: property.currency || "USD",
+      level: 0, // Level 0 for House Owner cashback
+      status: "pending",
+    });
+
+    // Update lead with the calculated amount
+    await storage.updateLead(dealId, { houseOwnerCashbackAmount: amount });
+
+    // Update house owner profile
+    const profile = await storage.getHouseOwnerProfile(property.houseOwnerId);
+    if (profile) {
+      const newTotal = (parseFloat(profile.totalCashbackEarned || "0") + parseFloat(amount)).toFixed(2);
+      await storage.updateHouseOwnerProfile(property.houseOwnerId, { totalCashbackEarned: newTotal });
+    }
+
+    // Create notification for the house owner
+    await storage.createNotification({
+      userId: property.houseOwnerId,
+      title: "Cashback Earned!",
+      body: `Your deal confirmation for ${property.title} was successful! You earned $${amount} in cashback.`,
+      type: "payment",
+    });
+
+  } catch (error) {
+    console.error("Error processing house owner cashback:", error);
+  }
+}
+
+function calculateHouseOwnerCashback(price: string, type: string): string {
+  const value = parseFloat(price);
+  if (type === 'monthly') {
+    // 10% of one month's rent
+    return (value * 0.1).toFixed(2);
+  } else {
+    // 1% of sale price
+    return (value * 0.01).toFixed(2);
   }
 }
