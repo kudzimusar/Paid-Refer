@@ -5,7 +5,7 @@ import {
   Link2, TrendingUp, Share2, Copy, ExternalLink,
   Plus, X, ChevronDown, ChevronUp, Sparkles, Banknote,
   CheckCircle2, Loader2, Trophy, Target, RotateCcw,
-  QrCode, ShieldCheck
+  QrCode, ShieldCheck, Users, History, ArrowUpRight, ArrowDownLeft
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -256,6 +256,16 @@ export default function ReferrerDashboard() {
     queryFn: () => apiRequest("GET", "/api/referrer/links"),
   });
 
+  const { data: settlements = [] } = useQuery<any[]>({
+    queryKey: ["/api/settlements/earnings"],
+    queryFn: () => apiRequest("GET", "/api/settlements/earnings"),
+  });
+
+  const { data: network = [] } = useQuery<any[]>({
+    queryKey: ["/api/referral/network"],
+    queryFn: () => apiRequest("GET", "/api/referral/network"),
+  });
+
   const { data: activity = [] } = useQuery<MockActivity[]>({
     queryKey: ["referrer-activity"],
     queryFn: () => apiRequest("GET", "/api/referrer/activity"),
@@ -481,6 +491,72 @@ export default function ReferrerDashboard() {
             </div>
           </motion.div>
         )}
+
+        {/* ── My Network (Downlines) ── */}
+        <div className="space-y-4">
+          <SectionTitle title="My Network" subtitle="Friends you've brought on board" count={network.length} />
+          {network.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3">
+              {network.map((member) => (
+                <div key={member.id} className="premium-card p-4 flex items-center justify-between bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                      {member.firstName?.[0] || member.email?.[0] || "?"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800">{member.firstName || "Anonymous"} {member.lastName || ""}</p>
+                      <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">{member.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-emerald-600">Active</p>
+                    <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">Member since {new Date(member.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="premium-card p-6 text-center bg-white border-dashed border-neutral-200">
+              <Users className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+              <p className="text-xs text-neutral-500 font-medium">Your network is empty. Share your link to grow your team!</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Settlement Ledger ── */}
+        <div className="space-y-4">
+          <SectionTitle title="Earnings Ledger" subtitle="Pending & completed settlements" />
+          <div className="space-y-3">
+            {settlements.length > 0 ? (
+              settlements.map((s) => (
+                <div key={s.id} className="premium-card p-4 flex items-center justify-between bg-white border-l-4 border-l-blue-500">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${s.status === 'paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {s.status === 'paid' ? <CheckCircle2 className="w-5 h-5" /> : <Loader2 className="w-5 h-5 animate-spin" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800">${s.amount} {s.currency}</p>
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">
+                        {s.level === 1 ? "Direct Commission" : `Level ${s.level} Network Earning`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <StatusBadge status={s.status} />
+                    <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-1">
+                      {s.status === 'paid' ? `Paid ${new Date(s.paidAt).toLocaleDateString()}` : "Waiting for Agent"}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="premium-card p-6 text-center bg-white border-dashed border-neutral-200">
+                <History className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+                <p className="text-xs text-neutral-500 font-medium">No settlements found in your ledger yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* ── Referral links section ── */}
         <div className="space-y-4">

@@ -89,7 +89,7 @@ export default function Chat() {
                   : "Accept leads to start conversations with customers"
                 }
               </p>
-              <Link href={user?.role === 'customer' ? '/customer-form' : '/agent-dashboard'}>
+              <Link href={user?.role === 'customer' ? '/search' : '/dashboard/leads'}>
                 <button className="bg-primary text-white px-6 py-2 rounded-lg font-medium">
                   {user?.role === 'customer' ? 'Find Apartment' : 'View Leads'}
                 </button>

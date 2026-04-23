@@ -58,6 +58,7 @@ import { initiateMobilePayment, checkPaymentStatus, updatePaynowTransaction } fr
 import { triggerAgentScoringUpdate } from "./lib/agent-scoring.ts";
 import { createConversation } from "./lib/firestore-chat";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
+import { processTieredCommissions } from "./lib/commissions";
 import { db } from "./db.ts";
 import {
   leads,
@@ -793,12 +794,11 @@ Empowering local agents & referrers.
       // Trigger Scoring Update
       if (updates.status === 'contacted' || updates.status === 'closed') {
         triggerAgentScoringUpdate(lead.agentId);
-      }
-      
-      // Trigger Review and Commission on Close
       if (updates.status === 'closed') {
         triggerReviewRequest(lead.id, lead.customerId, lead.agentId).catch(console.error);
-        triggerCommissionPayout(lead.id).catch(console.error);
+        processTieredCommissions(lead.id).catch(err => {
+          console.error("Tiered commission processing failed:", err);
+        });
       }
       
       // AI MATCH QUALITY FEEDBACK (Optional n8n trigger)
@@ -1820,6 +1820,113 @@ Empowering local agents & referrers.
     ws.on('close', () => {
       console.log('WebSocket connection closed');
     });
+  });
+
+  // --- REFERRAL & SETTLEMENT ROUTES (Pyramid/Tiered System) ---
+  
+  /**
+   * Link current user to a referrer via code
+   */
+  app.post("/api/referral/join", requireAuth, async (req: any, res) => {
+    try {
+      const { referralCode } = req.body;
+      const userId = req.user.id;
+
+      if (!referralCode) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      const link = await storage.getReferralLinkByShortCode(referralCode);
+      if (!link) {
+        return res.status(404).json({ message: "Invalid referral code" });
+      }
+
+      if (link.referrerId === userId) {
+        return res.status(400).json({ message: "You cannot refer yourself" });
+      }
+
+      // Update user with referrer ID
+      await storage.updateUser(userId, { referredByUserId: link.referrerId });
+
+      // Track conversion
+      await storage.updateReferralLink(link.id, { 
+        totalConversions: (link.totalConversions || 0) + 1 
+      });
+
+      res.json({ success: true, message: "Successfully joined referral network" });
+    } catch (error) {
+      console.error("Error joining referral:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  /**
+   * Get downline members for the logged in user
+   */
+  app.get("/api/referral/network", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const downlines = await db.select().from(users).where(eq(users.referredByUserId, userId));
+      res.json(downlines);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch network" });
+    }
+  });
+
+  /**
+   * Get pending settlements for the logged in user (as payer)
+   */
+  app.get("/api/settlements/to-pay", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const settlements = await storage.getSettlementsByPayer(userId);
+      res.json(settlements);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settlements" });
+    }
+  });
+
+  /**
+   * Get earnings/settlements for the logged in user (as payee)
+   */
+  app.get("/api/settlements/earnings", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const settlements = await storage.getSettlementsByPayee(userId);
+      res.json(settlements);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch earnings" });
+    }
+  });
+
+  /**
+   * Mark a settlement as paid (Payer action)
+   */
+  app.post("/api/settlements/:id/mark-paid", requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { evidenceUrl } = req.body;
+      const userId = req.user.id;
+
+      // Verify ownership
+      const [settlement] = await db.select().from(commissionSettlements).where(eq(commissionSettlements.id, id));
+      if (!settlement) return res.status(404).json({ message: "Settlement not found" });
+      if (settlement.payerId !== userId) return res.status(403).json({ message: "Unauthorized" });
+
+      const updated = await storage.updateSettlementStatus(id, 'paid', evidenceUrl);
+      
+      // Notify the payee
+      await storage.createNotification({
+        userId: settlement.payeeId,
+        title: "Payment Received",
+        body: `An agent has marked a $${settlement.amount} commission as paid. Check your balance.`,
+        type: "payment",
+      });
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update settlement" });
+    }
   });
 
   return httpServer;

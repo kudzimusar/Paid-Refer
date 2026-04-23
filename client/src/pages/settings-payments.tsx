@@ -150,6 +150,27 @@ export default function SettingsPaymentsPage() {
               </div>
             </div>
           </PremiumCard>
+
+          {/* Zimbabwe Local Options */}
+          <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-blue-900">Zimbabwe Local Settlements</h4>
+                <p className="text-[11px] text-blue-700 font-medium">EcoCash · InnBucks · Paynow</p>
+              </div>
+            </div>
+            <p className="text-xs text-blue-800/80 leading-relaxed">
+              Since Stripe has limited support in Zimbabwe, we've integrated local gateways for instant P2P settlements. 
+              Agents can pay commissions directly via **EcoCash** or **InnBucks** with automated proof-of-payment tracking.
+            </p>
+            <div className="flex gap-2">
+              <div className="bg-white/50 px-3 py-1 rounded-lg text-[10px] font-bold text-blue-600">INSTANT</div>
+              <div className="bg-white/50 px-3 py-1 rounded-lg text-[10px] font-bold text-blue-600">ZERO FEE</div>
+            </div>
+          </div>
         </div>
 
         {/* Subscription / Plan */}
@@ -178,7 +199,12 @@ export default function SettingsPaymentsPage() {
                   <Clock className="w-3.5 h-3.5" />
                   Renews May 12, 2026
                 </div>
-                <button className="text-xs font-bold text-primary hover:underline">
+                <button 
+                  onClick={() => {
+                    toast({ title: "Opening Plan Selector", description: "Loading Elite and Enterprise options..." });
+                  }}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
                   Change Plan
                 </button>
               </div>

@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { isDemoMode } from "@/lib/demoMode";
+import { getMockAgentLeads } from "@/lib/mockData";
+import { apiRequest } from "@/lib/queryClient";
 
 export type LeadStatus =
   | "new"
@@ -55,6 +59,7 @@ export interface LeadFilters {
 }
 
 export function useLeads() {
+  const { user } = useAuthContext();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,17 +82,52 @@ export function useLeads() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (filters.status !== "all") params.set("status", filters.status);
-      if (filters.urgency !== "all") params.set("urgency", filters.urgency);
-      if (filters.country !== "all") params.set("country", filters.country);
-      if (filters.search) params.set("search", filters.search);
-      params.set("sortBy", filters.sortBy);
+      let data;
+      
+      if (isDemoMode()) {
+        await new Promise(r => setTimeout(r, 600));
+        const allMockLeads = getMockAgentLeads() as any[];
+        
+        // --- REAL AI MATCHING LOGIC ---
+        // Filter leads based on agent's profile: coverage areas and property types
+        const agentAreas = user?.coverageAreas || [];
+        const agentTypes = user?.propertyTypes || [];
+        
+        const matchedLeads = allMockLeads.filter(lead => {
+          // If agent has no specific areas/types, show all for demo
+          if (agentAreas.length === 0 && agentTypes.length === 0) return true;
+          
+          const areaMatch = agentAreas.length === 0 || 
+                          agentAreas.includes(lead.city) || 
+                          agentAreas.includes(lead.preferredLocation);
+          const typeMatch = agentTypes.length === 0 || 
+                          agentTypes.includes(lead.propertyType);
+          
+          return areaMatch && typeMatch;
+        });
 
-      const res = await fetch(`/api/agent/leads?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await res.json();
+        data = {
+          leads: matchedLeads,
+          stats: {
+            total: matchedLeads.length,
+            new: matchedLeads.filter(l => l.status === "new" || l.status === "pending").length,
+            inProgress: matchedLeads.filter(l => ["contacted", "in_progress"].includes(l.status)).length,
+            closedThisMonth: matchedLeads.filter(l => l.status === "deal_closed").length,
+            expiringIn24h: matchedLeads.filter(l => l.status === "new" && Math.random() > 0.7).length,
+            totalUnread: 0
+          }
+        };
+      } else {
+        const params = new URLSearchParams();
+        if (filters.status !== "all") params.set("status", filters.status);
+        if (filters.urgency !== "all") params.set("urgency", filters.urgency);
+        if (filters.country !== "all") params.set("country", filters.country);
+        if (filters.search) params.set("search", filters.search);
+        params.set("sortBy", filters.sortBy);
+
+        data = await apiRequest("GET", `/api/agent/leads?${params}`);
+      }
+
       setLeads(data.leads || []);
       setStats(data.stats || {
         total: 0,
@@ -102,7 +142,7 @@ export function useLeads() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, user]);
 
   useEffect(() => {
     fetchLeads();
@@ -116,14 +156,14 @@ export function useLeads() {
       method: "POST",
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-      const data = await res.json();
-      if (res.ok) {
-        setLeads((prev) =>
-          prev.map((l) =>
-            l.id === leadId ? { ...l, status: "in_progress", conversationId: data.conversationId } : l
-          )
-        );
-      }
+    const data = await res.json();
+    if (res.ok) {
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId ? { ...l, status: "in_progress", conversationId: data.conversationId } : l
+        )
+      );
+    }
     return res.ok;
   }, []);
 

@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, ArrowRight, Mail, Phone, MessageCircle, Check, Sparkles } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { isDemoMode } from "@/lib/demoMode";
+import { useNotifications } from "../contexts/NotificationContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ChipSelector, StepProgress, Counter } from "@/components/ui/primitives";
@@ -433,6 +433,7 @@ export default function OnboardingPage() {
   const { role } = useParams<{ role: string }>();
   const { user } = useAuthContext();
   const { toast } = useToast();
+  const { sendNotification } = useNotifications();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [contactData, setContactData] = useState<any>(null);
@@ -501,9 +502,33 @@ export default function OnboardingPage() {
         localStorage.setItem('demo_firstName', contactData?.firstName || 'Demo');
         localStorage.setItem('demo_lastName', contactData?.lastName || 'User');
         localStorage.setItem('demo_phone', contactData?.phone || '+263808120135');
+        const pendingCode = localStorage.getItem('pending_shortcode');
+        if (pendingCode) {
+          sendNotification({
+            type: "conversion",
+            title: "Referral Handshake! 🤝",
+            message: `Successfully linked with Referrer (${pendingCode}). Your account is now eligible for premium matches.`,
+          });
+          localStorage.removeItem('pending_shortcode');
+        }
         return { success: true };
       }
-      return await apiRequest("POST", "/api/auth/complete-onboarding", {});
+      if (!isDemoMode()) {
+        const res = await apiRequest("POST", "/api/auth/complete-onboarding", {});
+        
+        // Handle referral linkage if pending
+        const pendingCode = localStorage.getItem('pending_shortcode');
+        if (pendingCode) {
+          try {
+            await apiRequest("POST", "/api/referral/join", { referralCode: pendingCode });
+            localStorage.removeItem('pending_shortcode');
+          } catch (err) {
+            console.error("Failed to auto-join referral:", err);
+          }
+        }
+        return res;
+      }
+      return { success: true };
     },
     onSuccess: () => setDone(true),
     onError: () => toast({ title: "Error", description: "Onboarding completion failed. Please try again.", variant: "destructive" }),

@@ -8,6 +8,7 @@ import { MarketProvider } from "./contexts/MarketContext";
 import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { AIEventBusProvider } from "./contexts/AIEventBusContext";
 import { ProofOfIntroductionProvider } from "./contexts/ProofOfIntroductionContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { RoleSwitcher } from "@/components/demo/RoleSwitcher";
 import { AIActivityIndicator } from "@/components/demo/AIActivityIndicator";
 import { GuidedTourController } from "@/components/demo/GuidedTourController";
@@ -35,7 +36,7 @@ import AcademyPage from "@/pages/academy";
 
 
 // Lazy-load less-critical pages
-const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard").then(m => ({ default: m.AgentLeadDashboard })));
+const AgentLeadDashboard = lazy(() => import("@/pages/AgentLeadDashboard"));
 const ReferralLandingPage = lazy(() => import("@/pages/referral-landing"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
@@ -147,7 +148,7 @@ function AppContent() {
             <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
             <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
             <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer"]} component={AcademyPage} />
-            <ProtectedRoute path="/profile" roles={["customer", "referrer"]} component={ProfilePage} />
+            <ProtectedRoute path="/profile" roles={["customer", "referrer", "agent"]} component={ProfilePage} />
 
             {/* ── Referrer ── */}
             <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
@@ -169,20 +170,22 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MarketProvider>
-          <DemoModeProvider>
-            <AIEventBusProvider>
-              <ProofOfIntroductionProvider>
-                <WouterRouter base={base}>
-                  <TooltipProvider>
-                    <Toaster />
-                    <AppContent />
-                  </TooltipProvider>
-                </WouterRouter>
-              </ProofOfIntroductionProvider>
-            </AIEventBusProvider>
-          </DemoModeProvider>
-        </MarketProvider>
+        <NotificationProvider>
+          <MarketProvider>
+            <DemoModeProvider>
+              <AIEventBusProvider>
+                <ProofOfIntroductionProvider>
+                  <WouterRouter base={base}>
+                    <TooltipProvider>
+                      <Toaster />
+                      <AppContent />
+                    </TooltipProvider>
+                  </WouterRouter>
+                </ProofOfIntroductionProvider>
+              </AIEventBusProvider>
+            </DemoModeProvider>
+          </MarketProvider>
+        </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

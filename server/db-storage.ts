@@ -34,6 +34,7 @@ import {
   workflowLogs,
   agentPreRegistrations,
   balances,
+  commissionSettlements,
 } from "@shared/schema.ts";
 import { db } from "./db.ts";
 import { eq, or, and, sql } from "drizzle-orm";
@@ -303,6 +304,47 @@ export class DatabaseStorage implements IStorage {
 
   async logCommunication(log: any): Promise<void> {
     // Implementation for comms logging
+  }
+
+  // Tiered Referral Methods
+  async getReferralChain(userId: string, depth: number = 3): Promise<User[]> {
+    const chain: User[] = [];
+    let currentUserId = userId;
+    
+    for (let i = 0; i < depth; i++) {
+      const [user] = await db.select().from(users).where(eq(users.id, currentUserId));
+      if (!user || !user.referredByUserId) break;
+      
+      const [referrer] = await db.select().from(users).where(eq(users.id, user.referredByUserId));
+      if (!referrer) break;
+      
+      chain.push(referrer);
+      currentUserId = referrer.id;
+    }
+    
+    return chain;
+  }
+
+  async createCommissionSettlement(settlement: any): Promise<CommissionSettlement> {
+    const [created] = await db.insert(commissionSettlements).values(settlement).returning();
+    return created;
+  }
+
+  async getSettlementsByPayer(payerId: string): Promise<CommissionSettlement[]> {
+    return db.select().from(commissionSettlements).where(eq(commissionSettlements.payerId, payerId));
+  }
+
+  async getSettlementsByPayee(payeeId: string): Promise<CommissionSettlement[]> {
+    return db.select().from(commissionSettlements).where(eq(commissionSettlements.payeeId, payeeId));
+  }
+
+  async updateSettlementStatus(id: string, status: string, evidenceUrl?: string): Promise<CommissionSettlement> {
+    const updates: any = { status, updatedAt: new Date() };
+    if (evidenceUrl) updates.evidenceUrl = evidenceUrl;
+    if (status === 'paid') updates.paidAt = new Date();
+    
+    const [updated] = await db.update(commissionSettlements).set(updates).where(eq(commissionSettlements.id, id)).returning();
+    return updated;
   }
 }
 

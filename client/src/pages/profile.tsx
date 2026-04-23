@@ -1,13 +1,14 @@
 import { useAuthContext } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
-import { User, Settings, ShieldCheck, CreditCard, LogOut, ChevronRight, MapPin, Phone, Mail, Zap, Target, TrendingUp, Sparkles, Shield, BookOpen, DollarSign, Users, HelpCircle, X } from "lucide-react";
+import { User, Settings, ShieldCheck, CreditCard, LogOut, ChevronRight, MapPin, Phone, Mail, Zap, Target, TrendingUp, Sparkles, Shield, BookOpen, DollarSign, Users, HelpCircle, X, Award, Briefcase } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { isDemoMode } from "@/lib/demoMode";
 
 
 
@@ -27,6 +28,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const isReferrer = user.role === "referrer";
+  const isAgent = user.role === "agent";
   
   // Differentiated Stats
   const customerStats = [
@@ -41,7 +43,25 @@ export default function ProfilePage() {
     { label: "Active Links", value: links.length || "3", icon: TrendingUp, color: "text-blue-500" },
   ];
 
-  const stats = isReferrer ? referrerStats : customerStats;
+  const agentStats = [
+    { label: "Closed Deals", value: "18", icon: Award, color: "text-emerald-500" },
+    { label: "Trust Score", value: "842", icon: ShieldCheck, color: "text-blue-500" },
+    { label: "Response Time", value: "12m", icon: Zap, color: "text-amber-500" },
+  ];
+
+  const stats = isReferrer ? referrerStats : isAgent ? agentStats : customerStats;
+
+  const getRoleLabel = () => {
+    if (isReferrer) return "ELITE REFERRER";
+    if (isAgent) return "VERIFIED AGENT";
+    return "PREMIUM INVESTOR";
+  };
+
+  const getRoleColor = () => {
+    if (isReferrer) return "bg-emerald-600";
+    if (isAgent) return "bg-purple-600";
+    return "bg-blue-600";
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50/50 pb-24">
@@ -50,22 +70,27 @@ export default function ProfilePage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 -mr-32 -mt-32" />
         <div className="max-w-md mx-auto flex flex-col items-center text-center relative z-10">
           <div className="relative mb-6">
-            <div className="w-28 h-28 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-[32px] flex items-center justify-center border-4 border-white shadow-xl rotate-3">
+            <div className={cn(
+              "w-28 h-28 rounded-[32px] flex items-center justify-center border-4 border-white shadow-xl rotate-3 transition-colors",
+              isAgent ? "bg-gradient-to-tr from-purple-500/20 to-indigo-500/20" : "bg-gradient-to-tr from-primary/20 to-purple-500/20"
+            )}>
               <div className="-rotate-3">
-                <User className="w-14 h-14 text-primary" />
+                <User className={cn("w-14 h-14", isAgent ? "text-purple-600" : "text-primary")} />
               </div>
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-7 h-7 rounded-2xl border-4 border-white flex items-center justify-center">
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
-            </div>
+            {(user.isVerified || isAgent) && (
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-7 h-7 rounded-2xl border-4 border-white flex items-center justify-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-white" />
+              </div>
+            )}
           </div>
           
-          <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{user.name}</h2>
+          <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{user.firstName} {user.lastName}</h2>
           <div className="flex items-center gap-2 mt-2">
-            <Badge className={cn("border-none font-bold px-3 py-1 rounded-lg", isReferrer ? "bg-emerald-600 text-white" : "bg-blue-600 text-white")}>
-              {isReferrer ? "ELITE REFERRER" : "PREMIUM INVESTOR"}
+            <Badge className={cn("border-none font-bold px-3 py-1 rounded-lg text-white", getRoleColor())}>
+              {getRoleLabel()}
             </Badge>
-            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.userId.slice(0, 8)}</span>
+            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.id?.slice(0, 8) || "DEMO"}</span>
           </div>
           
           <div className="grid grid-cols-3 gap-4 mt-10 w-full">
@@ -86,14 +111,14 @@ export default function ProfilePage() {
         {/* Role Specific Insights */}
         <div className="space-y-4">
           <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">
-            {isReferrer ? "REFERRER ANALYTICS" : "AI PERFORMANCE INSIGHTS"}
+            {isReferrer ? "REFERRER ANALYTICS" : isAgent ? "AGENT PERFORMANCE" : "AI PERFORMANCE INSIGHTS"}
           </h3>
           <PremiumCard className="p-6 bg-neutral-900 text-white border-none shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-primary/20 rounded-xl"><Target className="w-5 h-5 text-primary" /></div>
               <div>
                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                  {isReferrer ? "Earning Velocity" : "Match Efficiency"}
+                  {isReferrer ? "Earning Velocity" : isAgent ? "Conversion Velocity" : "Match Efficiency"}
                 </p>
                 <p className="text-lg font-bold">Optimal Range</p>
               </div>
@@ -101,16 +126,16 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
-                  <span className="opacity-60">{isReferrer ? "Link Conversion Rate" : "Search Precision"}</span>
-                  <span>{isReferrer ? "12.5%" : "94%"}</span>
+                  <span className="opacity-60">{isReferrer ? "Link Conversion Rate" : isAgent ? "Lead Close Rate" : "Search Precision"}</span>
+                  <span>{isReferrer ? "12.5%" : isAgent ? "34%" : "94%"}</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[94%]" />
+                  <div className="h-full bg-primary w-[34%]" />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
-                  <span className="opacity-60">{isReferrer ? "Network Growth" : "Market Demand Intensity"}</span>
+                  <span className="opacity-60">{isReferrer ? "Network Growth" : isAgent ? "Customer Trust Rating" : "Market Demand Intensity"}</span>
                   <span className="text-amber-400">VERY HIGH</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -124,7 +149,6 @@ export default function ProfilePage() {
         {/* How-To Center */}
         <div className="space-y-4">
           <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">Skill Center</h3>
-
 
           <Link href="/academy">
             <button
@@ -148,12 +172,17 @@ export default function ProfilePage() {
               { icon: Mail, label: "Email", value: user.email },
               { icon: Phone, label: "Phone", value: user.phone || "+263 771 234 567" },
               { icon: MapPin, label: "Market", value: user.country === 'ZW' ? 'Zimbabwe' : user.country === 'ZA' ? 'South Africa' : 'Japan' },
+              ...(isAgent ? [
+                { icon: Award, label: "Real Estate License", value: user.licenseNumber || "ZREB-55241" },
+                { icon: Briefcase, label: "Specialty", value: user.propertyTypes?.join(", ") || "Residential, Stands" },
+                { icon: Target, label: "Coverage", value: user.coverageAreas?.join(", ") || "Harare, Bulawayo" },
+              ] : [])
             ].map((item) => (
               <div key={item.label} className="p-4 flex items-center space-x-4 hover:bg-neutral-50 transition-colors">
                 <div className="p-2.5 bg-neutral-100 rounded-xl text-neutral-500"><item.icon className="w-4 h-4" /></div>
                 <div className="flex-1">
                   <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{item.label}</div>
-                  <div className="text-sm font-bold text-neutral-900">{item.value}</div>
+                  <div className="text-sm font-bold text-neutral-900 line-clamp-1">{item.value}</div>
                 </div>
               </div>
             ))}

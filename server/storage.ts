@@ -21,6 +21,7 @@ import {
   type InsertPayment,
   type Notification,
   type InsertNotification,
+  type CommissionSettlement,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 
@@ -94,6 +95,13 @@ export interface IStorage {
   updateAgentScore(score: any): Promise<void>;
   createVerification(verification: any): Promise<void>;
   logCommunication(log: any): Promise<void>;
+  
+  // Tiered Referral & Settlements
+  getReferralChain(userId: string, depth?: number): Promise<User[]>;
+  createCommissionSettlement(settlement: any): Promise<CommissionSettlement>;
+  getSettlementsByPayer(payerId: string): Promise<CommissionSettlement[]>;
+  getSettlementsByPayee(payeeId: string): Promise<CommissionSettlement[]>;
+  updateSettlementStatus(id: string, status: string, evidenceUrl?: string): Promise<CommissionSettlement>;
 }
 
 export class MemStorage implements IStorage {
@@ -619,6 +627,25 @@ export class MemStorage implements IStorage {
   }
   async logCommunication(log: any): Promise<void> {
     console.log("Communication Logged:", log);
+  }
+
+  // Tiered Referral & Settlements
+  async getReferralChain(userId: string, depth: number = 3): Promise<User[]> {
+    return [];
+  }
+  async createCommissionSettlement(settlement: any): Promise<CommissionSettlement> {
+    const id = nanoid();
+    const created = { ...settlement, id, createdAt: new Date(), updatedAt: new Date() };
+    return created;
+  }
+  async getSettlementsByPayer(payerId: string): Promise<CommissionSettlement[]> {
+    return [];
+  }
+  async getSettlementsByPayee(payeeId: string): Promise<CommissionSettlement[]> {
+    return [];
+  }
+  async updateSettlementStatus(id: string, status: string, evidenceUrl?: string): Promise<CommissionSettlement> {
+    return {} as CommissionSettlement;
   }
 }
 

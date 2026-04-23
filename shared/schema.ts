@@ -99,6 +99,7 @@ export const users = pgTable("users", {
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default('inactive'),
   subscriptionRenewsAt: timestamp("subscription_renews_at"),
   firebaseUid: varchar("firebase_uid", { length: 128 }).unique(),
+  referredByUserId: varchar("referred_by_user_id"), // Track the pyramid chain
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -642,6 +643,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   agentVerifications: many(agentVerifications),
   paymentTransactions: many(paymentTransactions),
   communicationLogs: many(communicationLogs),
+  referrals: many(users, { relationName: 'referredBy' }),
+  referrer: one(users, {
+    fields: [users.referredByUserId],
+    references: [users.id],
+    relationName: 'referredBy'
+  }),
+  settlementsAsPayer: many(commissionSettlements, { relationName: 'payer' }),
+  settlementsAsPayee: many(commissionSettlements, { relationName: 'payee' }),
 }));
 
 export const customerRequestsRelations = relations(customerRequests, ({ one, many }) => ({
@@ -916,6 +925,22 @@ export const competitorPrices = pgTable("competitor_prices", {
   scrapedAt: timestamp("scraped_at").defaultNow(),
 });
 
+// ── COMMISSION SETTLEMENTS (Pyramid/Tiered referrals) ─────────
+export const commissionSettlements = pgTable("commission_settlements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dealId: varchar("deal_id").notNull().references(() => leads.id),
+  payerId: varchar("payer_id").notNull().references(() => users.id),
+  payeeId: varchar("payee_id").notNull().references(() => users.id),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: currencyEnum("currency").notNull().default("USD"),
+  level: integer("level").notNull(), // 1 for direct, 2 for grand-parent, etc.
+  status: varchar("status", { length: 32 }).default("pending"), // pending, paid, disputed
+  evidenceUrl: text("evidence_url"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas for new tables
 export const insertLeadAuctionSchema = createInsertSchema(leadAuctions).omit({ id: true, openedAt: true });
 export const insertAgentPitchSchema = createInsertSchema(agentPitches).omit({ id: true, submittedAt: true });
@@ -968,6 +993,7 @@ export type CollaborationRequest = typeof collaborationRequests.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type NeighbourhoodProfile = typeof neighbourhoodProfiles.$inferSelect;
 export type CompetitorPrice = typeof competitorPrices.$inferSelect;
+export type CommissionSettlement = typeof commissionSettlements.$inferSelect;
 
 export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
   id: true,

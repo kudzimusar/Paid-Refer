@@ -221,7 +221,11 @@ export default function AgentDashboard() {
                     <span className="bottom-nav-badge" style={{ top: 4, right: 4 }}>{unreadCount}</span>
                   )}
                 </button>
-                <AvatarInitials name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`} isVerified={user?.isVerified} size="sm" />
+                <Link href="/profile">
+                  <div className="hover:opacity-80 transition-opacity cursor-pointer">
+                    <AvatarInitials name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`} isVerified={user?.isVerified} size="sm" />
+                  </div>
+                </Link>
               </div>
             </div>
           </div>

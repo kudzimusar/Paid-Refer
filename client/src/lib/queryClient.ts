@@ -198,11 +198,11 @@ export async function apiFetch<T>(
       ] as any;
     }
 
-    if (url === "/api/agent/leads" || url === "/api/admin/leads") {
+    if (url === "/api/agent/leads" || url === "/api/admin/leads" || url.includes("/api/agent/leads")) {
       const userRequests = JSON.parse(localStorage.getItem("demo_requests") || "[]");
       const userLeads = userRequests.map((req: any) => ({
-        id: "lead_" + req.id,
-        status: req.status,
+        id: req.id,
+        status: req.status === "pending" ? "new" : req.status === "contacted" ? "in_progress" : req.status,
         customerName: "Demo User",
         propertyType: req.propertyType || "Property",
         preferredArea: req.preferredCity || "Harare",
@@ -214,7 +214,21 @@ export async function apiFetch<T>(
         conversationId: req.status === "contacted" ? "conv_" + req.id : null,
       }));
       const { getMockAgentLeads } = await import("./mockData");
-      return [...userLeads, ...getMockAgentLeads()] as any;
+      return { leads: [...userLeads, ...getMockAgentLeads()], stats: { total: 12, new: 2, inProgress: 3, closedThisMonth: 1, expiringIn24h: 1, totalUnread: 0 } } as any;
+    }
+
+    if (url.includes("/api/settlements")) {
+      return [
+        { id: "sett_1", payeeId: "agent_1", amount: "250.00", currency: "USD", status: "pending", dealId: "deal_882", level: 1, paidAt: null },
+        { id: "sett_2", payeeId: "ref_5", amount: "50.00", currency: "USD", status: "paid", dealId: "deal_882", level: 2, paidAt: new Date().toISOString() },
+      ] as any;
+    }
+
+    if (url.includes("/api/referral/network")) {
+      return [
+        { id: "net_1", firstName: "Tatenda", lastName: "M", role: "referrer", email: "tatenda@example.com", createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
+        { id: "net_2", firstName: "Sarah", lastName: "J", role: "agent", email: "sarah@example.com", createdAt: new Date(Date.now() - 86400000 * 12).toISOString() },
+      ] as any;
     }
 
     if (url.startsWith("/api/")) {

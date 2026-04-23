@@ -1,14 +1,18 @@
-import { useState } from "react";
 import { useLeads, type Lead } from "../hooks/useLeads";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { LeadStatsBar } from "../components/leads/LeadStatsBar";
 import { LeadFilterBar } from "../components/leads/LeadFilterBar";
 import { LeadCard } from "../components/leads/LeadCard";
 import { LeadDetailPanel } from "../components/leads/LeadDetailPanel";
 import { ChatDrawer } from "../components/chat/ChatDrawer";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, User, CheckCircle2 } from "lucide-react";
+import { Link } from "wouter";
+import { useNotifications } from "../contexts/NotificationContext";
 
-export function AgentLeadDashboard() {
+export default function AgentLeadDashboard() {
   const {
     leads, loading, error, filters, setFilters,
     stats, refetch, acceptLead, declineLead, closeDeal, markLost,
@@ -16,6 +20,51 @@ export function AgentLeadDashboard() {
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [chatLead, setChatLead] = useState<Lead | null>(null);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { sendNotification } = useNotifications();
+
+  const handleAcceptLead = async (id: number) => {
+    const success = await acceptLead(id);
+    if (success) {
+      sendNotification({
+        type: "match",
+        title: "Lead Accepted! 🚀",
+        message: "Customer matched. Start a conversation now.",
+        link: "/chat"
+      });
+    }
+  };
+
+  const handleCloseDeal = async (id: number, val: number) => {
+    const success = await closeDeal(id, val);
+    if (success) {
+      sendNotification({
+        type: "conversion",
+        title: "Deal Closed! 💰",
+        message: `Congratulations! A deal has been successfully finalized. Commissions are being processed.`,
+      });
+    }
+  };
+
+  const { data: settlements = [] } = useQuery<any[]>({
+    queryKey: ["/api/settlements/to-pay"],
+    queryFn: () => apiRequest("GET", "/api/settlements/to-pay"),
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/settlements/${id}/mark-paid`, {}),
+    onSuccess: () => {
+      toast({ title: "Settlement Updated", description: "Commission marked as paid." });
+      sendNotification({
+        type: "payment",
+        title: "Commission Disbursed!",
+        message: "A commission payment has been successfully recorded in the network ledger.",
+      });
+      qc.invalidateQueries({ queryKey: ["/api/settlements/to-pay"] });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to update settlement.", variant: "destructive" }),
+  });
 
   // Kanban column grouping
   const newLeads = leads.filter((l) => l.status === "new");
@@ -43,15 +92,22 @@ export function AgentLeadDashboard() {
                 : "Your pipeline is all up to date"}
             </p>
           </div>
-          <button
-            onClick={refetch}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-indigo-600 
-                       bg-indigo-50 hover:bg-indigo-100 transition-all active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={refetch}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-indigo-600 
+                         bg-indigo-50 hover:bg-indigo-100 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <Link href="/profile">
+              <div className="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center border border-neutral-200 hover:bg-neutral-200 transition-colors cursor-pointer">
+                <User className="w-5 h-5 text-neutral-600" />
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -102,9 +158,9 @@ export function AgentLeadDashboard() {
                 >
                   <LeadCard
                     lead={lead}
-                    onAccept={acceptLead}
+                    onAccept={handleAcceptLead}
                     onDecline={declineLead}
-                    onClose={closeDeal}
+                    onClose={handleCloseDeal}
                     onMarkLost={markLost}
                     onOpenChat={setChatLead}
                     onViewDetail={setSelectedLead}
@@ -133,9 +189,9 @@ export function AgentLeadDashboard() {
                 >
                   <LeadCard
                     lead={lead}
-                    onAccept={acceptLead}
+                    onAccept={handleAcceptLead}
                     onDecline={declineLead}
-                    onClose={closeDeal}
+                    onClose={handleCloseDeal}
                     onMarkLost={markLost}
                     onOpenChat={setChatLead}
                     onViewDetail={setSelectedLead}
@@ -164,9 +220,9 @@ export function AgentLeadDashboard() {
                 >
                   <LeadCard
                     lead={lead}
-                    onAccept={acceptLead}
+                    onAccept={handleAcceptLead}
                     onDecline={declineLead}
-                    onClose={closeDeal}
+                    onClose={handleCloseDeal}
                     onMarkLost={markLost}
                     onOpenChat={setChatLead}
                     onViewDetail={setSelectedLead}
@@ -175,6 +231,60 @@ export function AgentLeadDashboard() {
               ))}
             </AnimatePresence>
           </Column>
+        </div>
+
+        {/* ── Referral Settlements (Pyramid Payouts) ── */}
+        <div className="space-y-6 pt-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight">Referral Network Settlements</h2>
+              <p className="text-sm text-neutral-500 font-medium mt-0.5">Commissions owed to the network for successful deals</p>
+            </div>
+            <div className="px-4 py-2 bg-amber-50 border border-amber-100 rounded-2xl">
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Total Owed</p>
+              <p className="text-lg font-black text-amber-700">
+                ${settlements.filter(s => s.status !== 'paid').reduce((sum: number, s: any) => sum + parseFloat(s.amount), 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {settlements.filter(s => s.status !== 'paid').length > 0 ? (
+              settlements.filter(s => s.status !== 'paid').map((s: any) => (
+                <div key={s.id} className="premium-card p-5 bg-white border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Payee</p>
+                      <p className="text-sm font-bold text-neutral-800">{s.payeeId.substring(0, 8)}...</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Amount</p>
+                      <p className="text-lg font-black text-amber-600">${s.amount}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-neutral-50 rounded-xl p-3 mb-4">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Deal Reference</p>
+                    <p className="text-xs font-medium text-neutral-600 truncate">{s.dealId}</p>
+                  </div>
+
+                  <button
+                    onClick={() => markPaidMutation.mutate(s.id)}
+                    disabled={markPaidMutation.isPending}
+                    className="btn-premium w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2 rounded-xl"
+                  >
+                    {markPaidMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Mark as Paid"}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-12 rounded-3xl border-2 border-dashed border-neutral-200 bg-neutral-50/50 flex flex-col items-center justify-center text-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-3" />
+                <p className="text-neutral-500 font-bold">All settlements are up to date!</p>
+                <p className="text-xs text-neutral-400 font-medium">When a deal closes, new commissions will appear here.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
