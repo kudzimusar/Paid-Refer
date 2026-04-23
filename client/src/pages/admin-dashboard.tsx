@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { NavLogo } from "@/components/ui/Logo";
+import { apiRequest } from "@/lib/queryClient";
 
 interface AdminMetrics {
   activeUsersNow: number;
@@ -37,6 +38,7 @@ interface AdminMetrics {
 export default function AdminDashboard() {
   const { data: metrics, isLoading } = useQuery<AdminMetrics>({
     queryKey: ["/api/admin/metrics"],
+    queryFn: () => apiRequest("GET", "/api/admin/metrics"),
     refetchInterval: 30000, // Refresh every 30s
   });
 
@@ -329,6 +331,7 @@ function PayoutItem({ agent, amount, date }: { agent: string; amount: number; da
 function EcosystemFeed() {
   const { data: events = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/ecosystem-events"],
+    queryFn: () => apiRequest("GET", "/api/admin/ecosystem-events"),
     refetchInterval: 10000,
   });
 
