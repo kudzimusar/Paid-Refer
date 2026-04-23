@@ -8,7 +8,10 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { isDemoMode } from "@/lib/demoMode";
 import { ArrowLeft, Phone, Plus, Send, Image, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
-import type { Conversation, Message } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Conversation, Message, WebSocketMessage } from "@/types";
 
 const MOCK_MESSAGES: Message[] = [
   {
@@ -66,14 +69,14 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
     }
   }, [messages]);
 
-  const { sendMessage } = useWebSocket((message) => {
-    if (message.type === 'new_message' && message.data.conversationId === conversation.id) {
+  const { sendMessage } = useWebSocket((message: WebSocketMessage) => {
+    if (message.type === 'new_message' && message.data && 'conversationId' in message.data && message.data.conversationId === conversation.id) {
       queryClient.invalidateQueries({
         queryKey: ['/api/conversation', conversation.id, 'messages'],
       });
     }
     
-    if (message.type === 'user_typing' && message.conversationId === conversation.id) {
+    if (message.type === 'user_typing' && 'conversationId' in message && message.conversationId === conversation.id) {
       setIsTyping(true);
       setTimeout(() => setIsTyping(false), 3000);
     }

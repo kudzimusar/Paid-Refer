@@ -470,6 +470,8 @@ export const MOCK_ACTIVITY: MockActivity[] = [
 export interface MockLead {
   id: number;
   status: string;
+  customerId: string;
+  agentId: string;
   customerName: string;
   propertyType: string;
   city: string;
@@ -493,6 +495,7 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     id: 1,
     status: "new",
     customerId: "cust_1",
+    agentId: "agent_1",
     customerName: "Chipo Ndlovu",
     propertyType: "2-Bedroom Flat",
     city: "Harare",
@@ -514,6 +517,7 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     id: 2,
     status: "new",
     customerId: "cust_2",
+    agentId: "agent_1",
     customerName: "Tapiwa Moyo",
     propertyType: "3-Bedroom House",
     city: "Harare",
@@ -535,6 +539,7 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     id: 3,
     status: "in_progress",
     customerId: "cust_3",
+    agentId: "agent_1",
     customerName: "Rudo Chikwamba",
     propertyType: "1-Bedroom Studio",
     city: "Harare",
@@ -556,6 +561,7 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     id: 4,
     status: "in_progress",
     customerId: "cust_4",
+    agentId: "agent_1",
     customerName: "Linda Matsumoto",
     propertyType: "Townhouse",
     city: "Harare",

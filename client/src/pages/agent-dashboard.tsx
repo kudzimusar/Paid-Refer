@@ -26,7 +26,7 @@ import { getMockAgentLeads } from "@/lib/mockData";
 
 
 interface Lead {
-  id: string;
+  id: number;
   status: string;
   customerName?: string | null;
   propertyType?: string;
@@ -61,8 +61,8 @@ function StatTile({ value, label, color = "blue" }: { value: number | string; la
 // Priority lead card (simplified, links to full kanban)
 function PriorityLeadCard({ lead, onAccept, onDecline, accepting }: {
   lead: Lead;
-  onAccept: (id: string) => void;
-  onDecline: (id: string) => void;
+  onAccept: (id: number) => void;
+  onDecline: (id: number) => void;
   accepting: boolean;
 }) {
   const score = lead.matchScore != null ? Math.round(lead.matchScore * 100) : null;
@@ -140,7 +140,7 @@ export default function AgentDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
-  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [showPrediction, setShowPrediction] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
@@ -163,7 +163,7 @@ export default function AgentDashboard() {
   });
 
   const acceptMutation = useMutation({
-    mutationFn: (leadId: string) =>
+    mutationFn: (leadId: number) =>
       apiRequest("PATCH", `/api/agent/lead/${leadId}`, { status: "contacted" }),
     onMutate: (id) => setAcceptingId(id),
     onSuccess: () => {
@@ -175,7 +175,7 @@ export default function AgentDashboard() {
   });
 
   const declineMutation = useMutation({
-    mutationFn: (leadId: string) =>
+    mutationFn: (leadId: number) =>
       apiRequest("PATCH", `/api/agent/lead/${leadId}`, { status: "lost" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/agent/leads"] }),
     onError: () => toast({ title: "Error", description: "Could not decline lead.", variant: "destructive" }),
