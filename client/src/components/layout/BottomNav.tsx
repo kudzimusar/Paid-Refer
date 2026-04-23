@@ -1,11 +1,11 @@
 import { useLocation, Link } from "wouter";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import {
   Home, Users, Building, MessageCircle, User,
   TrendingUp, Link2, Banknote, Bell, LayoutDashboard,
-  BarChart3, Shield, Settings
+  BarChart3, Shield, Settings, BookOpen
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
