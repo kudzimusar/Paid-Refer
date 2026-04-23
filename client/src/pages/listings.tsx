@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play } from "lucide-react";
+import { Plus, Building, MapPin, JapaneseYen, DollarSign, Brain, Trash2, Edit2, Loader2, Camera, Info, Zap, Play, Share2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
@@ -10,6 +10,8 @@ import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
 import { VirtualTour } from "@/components/properties/VirtualTour";
 import { isDemoMode } from "@/lib/demoMode";
+import { useProofOfIntroduction } from "@/contexts/ProofOfIntroductionContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface Property {
   id: string;
@@ -149,9 +151,26 @@ const TOUR_SLIDES = [
 ];
 
 function PropertyCard({ property, onDelete }: { property: Property; onDelete: () => void }) {
+  const { user } = useAuthContext();
+  const { generateCode } = useProofOfIntroduction();
+  const { toast } = useToast();
   const [showTour, setShowTour] = useState(false);
   const score = property.aiQualityScore || 0;
   const scoreColor = score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500";
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    
+    const code = generateCode(user.id, property.propertyType, property.city);
+    const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}r/${code.shortCode}`;
+    
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: "Secure Link Copied!",
+      description: "Proof of Introduction has been activated for this shareable link.",
+    });
+  };
 
   return (
     <motion.div
@@ -197,6 +216,14 @@ function PropertyCard({ property, onDelete }: { property: Property; onDelete: ()
             {property.status}
           </span>
         </div>
+
+        {/* Share Button Overlay */}
+        <button 
+          onClick={handleShare}
+          className="absolute bottom-3 right-3 w-10 h-10 bg-black/40 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center text-white hover:bg-black/60 transition-colors shadow-lg group-hover:scale-110 transition-transform duration-300"
+        >
+          <Share2 className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="p-4 space-y-3">

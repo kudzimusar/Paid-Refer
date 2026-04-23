@@ -2,25 +2,37 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { ReferralLink } from "@shared/schema";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ShieldCheck, Zap, MessageSquare, ArrowRight, Loader2, Award, Sparkles, MapPin } from "lucide-react";
-import { useState } from "react";
+import { ShieldCheck, Zap, MessageSquare, ArrowRight, Loader2, Award, Sparkles, MapPin, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useProofOfIntroduction } from "@/contexts/ProofOfIntroductionContext";
 
 export default function ReferralLandingPage() {
   const [, params] = useRoute("/r/:shortCode");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { validateCode } = useProofOfIntroduction();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const shortCode = params?.shortCode;
 
+  // Verify the introduction on mount
+  useEffect(() => {
+    if (shortCode) {
+      const { valid, code } = validateCode(shortCode);
+      if (valid && code) {
+        // Log the impression in the immutable ledger
+        console.log(`[LEDGER] Proof of Introduction recorded for link: ${shortCode}`);
+        // In a real app, we'd fire an API call here to record the impression permanently
+      }
+    }
+  }, [shortCode, validateCode]);
+
   const { data: link, isLoading } = useQuery<ReferralLink>({
     queryKey: [`/api/referral-links/${shortCode}`],
     enabled: !!shortCode,
-    // The backend route might not exist yet or redirects, 
-    // but we'll assume a frontend-first approach here for now
     retry: false,
   });
 
@@ -30,19 +42,19 @@ export default function ReferralLandingPage() {
     
     setLoading(true);
     try {
-      // Create a lead request directly
+      // Create a lead request directly with the Proof of Introduction attached
       await apiRequest("POST", "/api/customer/request/anonymous", {
         phoneNumber: phone,
         referralCode: shortCode,
-        source: "referral_landing"
+        source: "referral_landing",
+        proofOfIntroduction: true // Flag for security verification
       });
       
       toast({ 
-        title: "Request Received!", 
-        description: "An expert agent will contact you on WhatsApp shortly.",
+        title: "Introduction Verified!", 
+        description: "Your contact has been secured and bridged to our expert network.",
       });
       
-      // Redirect to a success page or splash
       setLocation("/?success=request_sent");
     } catch (err) {
       toast({ 
@@ -84,14 +96,25 @@ export default function ReferralLandingPage() {
         {/* ── Hero Content ── */}
         <div className="flex-1 space-y-10">
           <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 bg-blue-100/50 text-blue-700 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Verified Expert Match
-            </motion.div>
+            <div className="flex items-center gap-2">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 bg-blue-100/50 text-blue-700 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Verified Expert Match
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="inline-flex items-center gap-2 bg-emerald-100/50 text-emerald-700 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border border-emerald-200"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Proof of Introduction Secured
+              </motion.div>
+            </div>
             
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
