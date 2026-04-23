@@ -101,6 +101,68 @@ const ROLE_CONTENT = {
       { title: "Your Safety & POI Security", duration: "2:15", views: "3.1k" },
       { title: "Communicating with Agents Safely", duration: "3:05", views: "2.4k" }
     ]
+  },
+  house_owner: {
+    title: "House Owner Mastery",
+    subtitle: "Turn your property into a high-yield asset",
+    color: "from-amber-600 to-orange-700",
+    stats: { label: "Cashback Potential", value: "$500+", growth: "+100%" },
+    strategies: [
+      {
+        title: "Cashback Verification",
+        desc: "Learn how to confirm deal closures to unlock your exclusive cashback rewards and referral bonuses.",
+        icon: DollarSign,
+        tag: "Rewards"
+      },
+      {
+        title: "Property Visibility",
+        desc: "Optimize your property listings to attract top-tier agents and verified customers from our network.",
+        icon: MapPin,
+        tag: "Exposure"
+      },
+      {
+        title: "Direct Agent Connect",
+        desc: "Communicate directly with verified agents to ensure your property is represented with the highest standards.",
+        icon: MessageCircle,
+        tag: "Quality"
+      }
+    ],
+    tutorials: [
+      { title: "Claiming your first Cashback", duration: "2:20", views: "1.2k" },
+      { title: "Managing your Property Portfolio", duration: "4:15", views: "850" },
+      { title: "Collaborating with Elite Agents", duration: "3:40", views: "2.1k" }
+    ]
+  },
+  admin: {
+    title: "Ecosystem Governance",
+    subtitle: "Managing the next generation of real estate",
+    color: "from-neutral-800 to-black",
+    stats: { label: "Network Health", value: "98.4%", growth: "+0.5%" },
+    strategies: [
+      {
+        title: "AI Moderation Suite",
+        desc: "Master the tools that allow you to monitor and moderate thousands of listings and chats simultaneously.",
+        icon: BrainCircuit,
+        tag: "Control"
+      },
+      {
+        title: "Financial Oversight",
+        desc: "Ensure the ledger remains balanced and payouts are settled with absolute cryptographic certainty.",
+        icon: ShieldCheck,
+        tag: "Security"
+      },
+      {
+        title: "Stakeholder Management",
+        desc: "Balance the needs of agents, referrers, and customers to maintain a thriving, high-trust ecosystem.",
+        icon: Users,
+        tag: "Growth"
+      }
+    ],
+    tutorials: [
+      { title: "Advanced Network Analytics", duration: "8:45", views: "450" },
+      { title: "Handling High-Stakes Disputes", duration: "12:20", views: "120" },
+      { title: "Optimizing the AI Referral Loop", duration: "6:15", views: "340" }
+    ]
   }
 };
 

@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, Search, User, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useNotifications } from "../contexts/NotificationContext";
+import { DashboardSkeleton } from "../components/ui/DashboardSkeleton";
+import { Column } from "../components/leads/Column";
 
 export default function AgentLeadDashboard() {
   const {

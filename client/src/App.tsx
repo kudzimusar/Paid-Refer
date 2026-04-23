@@ -15,6 +15,8 @@ import { GuidedTourController } from "@/components/demo/GuidedTourController";
 import { lazy, Suspense } from "react";
 import { isDemoMode } from "@/lib/demoMode";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
+import { useState, useEffect } from "react";
 
 // ── Pages ──────────────────────────────────────────────────
 import SplashPage from "@/pages/splash";
@@ -61,6 +63,36 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       {user && !isPublic && <BottomNav />}
+    </div>
+  );
+}
+
+function DemoBanner() {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem("demo_banner_dismissed");
+    if (!dismissed && isDemoMode()) {
+      setIsVisible(true);
+    }
+  }, []);
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 text-xs md:text-sm font-bold z-[100] flex items-center justify-center gap-4 px-4 animate-in slide-in-from-top duration-300">
+      <span className="flex-1 text-center truncate">
+        🎭 DEMO MODE - Mocked Data for Review
+      </span>
+      <button 
+        onClick={() => {
+          setIsVisible(false);
+          sessionStorage.setItem("demo_banner_dismissed", "true");
+        }}
+        className="p-1 hover:bg-white/20 rounded-lg transition-colors shrink-0"
+      >
+        <X className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -116,12 +148,7 @@ function AppContent() {
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        {/* Global Demo Components */}
-        {isDemoMode() && (
-          <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 text-sm font-medium z-[100]">
-            🎭 DEMO MODE - All data is mocked for presentation purposes
-          </div>
-        )}
+        <DemoBanner />
         <RoleSwitcher />
         <AIActivityIndicator />
         <GuidedTourController />
@@ -140,9 +167,15 @@ function AppContent() {
             <ProtectedRoute path="/dashboard" roles={["agent", "admin"]} component={AgentDashboard} />
             <ProtectedRoute path="/dashboard/leads" roles={["agent"]} component={AgentLeadDashboard} />
             <ProtectedRoute path="/dashboard/listings" roles={["agent"]} component={ListingsPage} />
-            <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer"]} component={SettingsPaymentsPage} />
+            <ProtectedRoute path="/dashboard/settings/payments" roles={["agent", "referrer", "house_owner"]} component={SettingsPaymentsPage} />
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
+            
+            {/* ── Admin ── */}
             <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin/users" roles={["admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin/verify" roles={["admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin/payouts" roles={["admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin/registry" roles={["admin"]} component={AdminAgentRegistryPage} />
             <ProtectedRoute path="/admin/registry" roles={["admin"]} component={AdminAgentRegistryPage} />
 
 
@@ -150,9 +183,9 @@ function AppContent() {
             <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
             <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
             <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
-            <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
-            <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer"]} component={AcademyPage} />
-            <ProtectedRoute path="/profile" roles={["customer", "referrer", "agent"]} component={ProfilePage} />
+            <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer", "admin", "house_owner"]} component={NotificationsPage} />
+            <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer", "admin", "house_owner"]} component={AcademyPage} />
+            <ProtectedRoute path="/profile" roles={["customer", "referrer", "agent", "admin", "house_owner"]} component={ProfilePage} />
 
             {/* ── Referrer ── */}
             <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
