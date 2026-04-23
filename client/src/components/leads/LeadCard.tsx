@@ -12,7 +12,7 @@ interface Props {
   onAccept: (id: number) => Promise<boolean>;
   onDecline: (id: number, reason: string) => Promise<boolean>;
   onClose: (id: number, dealValue: number) => Promise<boolean>;
-  onMarkLost: (id: number, reason: string) => Promise<void>;
+  onMarkLost: (id: number, reason: string) => Promise<boolean>;
   onOpenChat: (lead: Lead) => void;
   onViewDetail: (lead: Lead) => void;
 }
@@ -341,8 +341,9 @@ export function LeadCard({
       {showDeclineModal && (
         <DeclineModal
           onConfirm={async (reason) => {
-            await onDecline(lead.id, reason);
-            setShowDeclineModal(false);
+            const success = await onDecline(lead.id, reason);
+            if (success) setShowDeclineModal(false);
+            return success;
           }}
           onCancel={() => setShowDeclineModal(false)}
         />
@@ -353,8 +354,9 @@ export function LeadCard({
         <CloseDealModal
           lead={lead}
           onConfirm={async (value) => {
-            await onClose(lead.id, value);
-            setShowCloseModal(false);
+            const success = await onClose(lead.id, value);
+            if (success) setShowCloseModal(false);
+            return success;
           }}
           onCancel={() => setShowCloseModal(false)}
         />
@@ -401,7 +403,7 @@ function DeclineModal({
   onConfirm,
   onCancel,
 }: {
-  onConfirm: (reason: string) => Promise<void>;
+  onConfirm: (reason: string) => Promise<boolean>;
   onCancel: () => void;
 }) {
   const [reason, setReason] = useState("");
@@ -469,7 +471,7 @@ function CloseDealModal({
   onCancel,
 }: {
   lead: Lead;
-  onConfirm: (value: number) => Promise<void>;
+  onConfirm: (value: number) => Promise<boolean>;
   onCancel: () => void;
 }) {
   const [dealValue, setDealValue] = useState("");
