@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Users, Sparkles, TrendingUp, ArrowRight, Shield } from "lucide-react";
 import { Link } from "wouter";
-import { AppIcon } from "@/components/ui/Logo";
+import { SplashLogo } from "@/components/ui/Logo";
 
 const features = [
   {
@@ -90,10 +90,7 @@ export default function SplashPage() {
           transition={{ type: "spring", stiffness: 200, damping: 15 }}
           className="relative mb-6"
         >
-          {/* Real brand logo — white card variant rendered on gradient */}
-          <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-2xl">
-            <AppIcon size="xl" dark={false} className="w-full h-full" />
-          </div>
+          <SplashLogo className="scale-110" />
         </motion.div>
 
         {/* Headline */}

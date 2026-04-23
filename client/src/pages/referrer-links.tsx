@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import {
   Link2, Copy, Share2, Plus, Sparkles, ChevronDown,
-  ChevronUp, X, Loader2, Filter, Search,
+  ChevronUp, X, Loader2, Filter, Search, QrCode, Download
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -16,10 +16,64 @@ import { useForm } from "react-hook-form";
 
 type LinkFilter = "all" | "active" | "expired";
 
+function QRModal({ url, shortCode, onClose }: { url: string, shortCode: string, onClose: () => void }) {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&bgcolor=ffffff`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-blue-600/10 to-transparent" />
+        
+        <div className="relative text-center space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="text-left">
+              <p className="text-xs font-black text-blue-600 uppercase tracking-[0.2em]">Refer Link</p>
+              <h3 className="text-xl font-black text-neutral-900">{shortCode}</h3>
+            </div>
+            <button onClick={onClose} className="p-2 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
+              <X className="w-5 h-5 text-neutral-500" />
+            </button>
+          </div>
+
+          <div className="bg-white p-4 rounded-[2rem] border-2 border-neutral-100 shadow-inner flex items-center justify-center">
+            <img src={qrUrl} alt="QR Code" className="w-full aspect-square rounded-xl" />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+              Scan this code to instantly open the AI landing page for this property search.
+            </p>
+            <button 
+              onClick={() => window.open(qrUrl, '_blank')}
+              className="w-full flex items-center justify-center gap-2 p-4 bg-neutral-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition-colors"
+            >
+              <Download className="w-4 h-4" /> Save QR Code
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function LinkRow({ link }: { link: MockReferralLink }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
-  const url = `${window.location.origin}/r/${link.shortCode}`;
+  const [showQR, setShowQR] = useState(false);
+  
+  // Use BASE_URL for GitHub Pages compatibility
+  const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  const url = `${window.location.origin}${base}/r/${link.shortCode}`;
+  
   const earnings = parseFloat(link.totalEarningsUsd ?? "0");
 
   const copy = () => {
@@ -28,100 +82,118 @@ function LinkRow({ link }: { link: MockReferralLink }) {
   };
 
   const share = () => {
-    if (navigator.share) navigator.share({ title: "Find a home with Refer", url });
-    else copy();
+    if (navigator.share) {
+      navigator.share({ 
+        title: "Find your dream home with Refer AI", 
+        text: `Check out this AI-matched property agent for ${link.targetArea || "your search"}!`,
+        url 
+      }).catch(() => copy());
+    } else copy();
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="premium-card p-5 space-y-4"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={link.isActive ? "active" : "expired"} />
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-              {link.shortCode}
-            </span>
-          </div>
-          <p className="text-sm font-bold text-neutral-800 truncate">{link.requestType || "General Referral"}</p>
-          {link.targetArea && (
-            <p className="text-xs text-neutral-500 font-medium">📍 {link.targetArea}</p>
-          )}
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-lg font-extrabold text-emerald-600">${earnings.toFixed(0)}</p>
-          <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">earned</p>
-        </div>
-      </div>
-
-      {/* URL row */}
-      <div className="flex items-center gap-2 bg-neutral-50 rounded-2xl px-4 py-3 border border-neutral-100">
-        <span className="font-mono text-xs text-neutral-500 flex-1 truncate">{url}</span>
-        <button onClick={copy} className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-neutral-400 hover:text-blue-500">
-          <Copy className="w-4 h-4" />
-        </button>
-        <button onClick={share} className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-neutral-400 hover:text-blue-500">
-          <Share2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Clicks", value: link.totalClicks, color: "text-neutral-800", bg: "bg-neutral-50" },
-          { label: "Converted", value: link.totalConversions, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Conv. Rate", value: link.totalClicks > 0 ? `${((link.totalConversions / link.totalClicks) * 100).toFixed(1)}%` : "0%", color: "text-purple-600", bg: "bg-purple-50" },
-        ].map(({ label, value, color, bg }) => (
-          <div key={label} className={`${bg} rounded-xl py-2.5 text-center`}>
-            <p className={`text-sm font-extrabold ${color}`}>{value}</p>
-            <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* AI copy expandable */}
-      {link.generatedCopyEn && (
-        <div>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-2 text-xs text-purple-600 font-bold w-full hover:opacity-80 transition-opacity"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            AI Promo Copy
-            {expanded ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
-          </button>
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 bg-purple-50/60 rounded-2xl p-4 border border-purple-100 relative group">
-                  <p className="text-xs text-purple-900 leading-relaxed font-medium pr-8 italic">
-                    "{link.generatedCopyEn}"
-                  </p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(link.generatedCopyEn!);
-                      toast({ title: "Copied!", description: "AI copy ready to paste." });
-                    }}
-                    className="absolute top-4 right-4 p-1.5 bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-purple-600" />
-                  </button>
-                </div>
-              </motion.div>
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="premium-card p-5 space-y-4"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusBadge status={link.isActive ? "active" : "expired"} />
+              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                {link.shortCode}
+              </span>
+            </div>
+            <p className="text-sm font-bold text-neutral-800 truncate">{link.requestType || "General Referral"}</p>
+            {link.targetArea && (
+              <p className="text-xs text-neutral-500 font-medium">📍 {link.targetArea}</p>
             )}
-          </AnimatePresence>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-lg font-extrabold text-emerald-600">${earnings.toFixed(0)}</p>
+            <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">earned</p>
+          </div>
         </div>
-      )}
-    </motion.div>
+
+        {/* URL row */}
+        <div className="flex items-center gap-2 bg-neutral-50 rounded-2xl px-4 py-3 border border-neutral-100">
+          <span className="font-mono text-xs text-neutral-500 flex-1 truncate">{url}</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowQR(true)} title="Show QR Code" className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-neutral-400 hover:text-blue-500">
+              <QrCode className="w-4 h-4" />
+            </button>
+            <button onClick={copy} title="Copy Link" className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-neutral-400 hover:text-blue-500">
+              <Copy className="w-4 h-4" />
+            </button>
+            <button onClick={share} title="Share Link" className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-neutral-400 hover:text-blue-500">
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Clicks", value: link.totalClicks, color: "text-neutral-800", bg: "bg-neutral-50" },
+            { label: "Converted", value: link.totalConversions, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Conv. Rate", value: link.totalClicks > 0 ? `${((link.totalConversions / link.totalClicks) * 100).toFixed(1)}%` : "0%", color: "text-purple-600", bg: "bg-purple-50" },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className={`${bg} rounded-xl py-2.5 text-center`}>
+              <p className={`text-sm font-extrabold ${color}`}>{value}</p>
+              <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* AI copy expandable */}
+        {link.generatedCopyEn && (
+          <div>
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-2 text-xs text-purple-600 font-bold w-full hover:opacity-80 transition-opacity"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              AI Promo Copy
+              {expanded ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
+            </button>
+            <AnimatePresence>
+              {expanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 bg-purple-50/60 rounded-2xl p-4 border border-purple-100 relative group">
+                    <p className="text-xs text-purple-900 leading-relaxed font-medium pr-8 italic">
+                      "{link.generatedCopyEn}"
+                    </p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(link.generatedCopyEn!);
+                        toast({ title: "Copied!", description: "AI copy ready to paste." });
+                      }}
+                      className="absolute top-4 right-4 p-1.5 bg-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-purple-600" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </motion.div>
+
+      <AnimatePresence>
+        {showQR && (
+          <QRModal url={url} shortCode={link.shortCode} onClose={() => setShowQR(false)} />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

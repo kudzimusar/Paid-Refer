@@ -1,24 +1,118 @@
 import { useAuthContext } from "@/contexts/AuthContext";
-import { User, Settings, ShieldCheck, CreditCard, LogOut, ChevronRight, MapPin, Phone, Mail, Zap, Target, TrendingUp, Sparkles, Shield } from "lucide-react";
+import { User, Settings, ShieldCheck, CreditCard, LogOut, ChevronRight, MapPin, Phone, Mail, Zap, Target, TrendingUp, Sparkles, Shield, BookOpen, DollarSign, Users, HelpCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+function HowToDrawer({ onClose }: { onClose: () => void }) {
+  const categories = [
+    {
+      title: "Skills to Sell",
+      icon: DollarSign,
+      items: [
+        "Share your unique link on WhatsApp groups",
+        "Explain the benefit of AI-verified agents to friends",
+        "Target people moving to Zimbabwe or South Africa"
+      ]
+    },
+    {
+      title: "How to get Paid",
+      icon: Zap,
+      items: [
+        "Earn $5 per verified lead submission",
+        "Get 10% commission on closed property deals",
+        "Withdraw earnings via EcoCash, InnBucks or Bank"
+      ]
+    },
+    {
+      title: "Customer Journey",
+      icon: Users,
+      items: [
+        "Use the Search tool to define your needs",
+        "Let Gemini AI score and match top agents",
+        "Track progress in real-time on your dashboard"
+      ]
+    }
+  ];
+
+  return (
+    <motion.div
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      className="fixed inset-x-0 bottom-0 z-[100] bg-white rounded-t-[2.5rem] shadow-2xl p-8 pb-12 border-t border-neutral-100 max-h-[85vh] overflow-y-auto"
+    >
+      <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mb-8" />
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-black text-neutral-900">App Guide</h2>
+          <p className="text-sm text-neutral-500 font-medium">Master the Refer Intelligence platform</p>
+        </div>
+        <button onClick={onClose} className="p-3 bg-neutral-100 rounded-2xl hover:bg-neutral-200 transition-colors">
+          <X className="w-6 h-6 text-neutral-500" />
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {categories.map((cat) => (
+          <div key={cat.title} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-xl text-blue-600"><cat.icon className="w-5 h-5" /></div>
+              <h3 className="font-bold text-neutral-900">{cat.title}</h3>
+            </div>
+            <ul className="space-y-3">
+              {cat.items.map((item, i) => (
+                <li key={i} className="flex items-start gap-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-100">
+                  <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[10px] font-black text-blue-600 border border-blue-100 flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </div>
+                  <p className="text-sm text-neutral-700 font-medium leading-relaxed">{item}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function ProfilePage() {
   const { user, logout } = useAuthContext();
+  const [showHowTo, setShowHowTo] = useState(false);
 
   const { data: leads = [] } = useQuery<any[]>({
     queryKey: ["/api/customer/leads"],
+    enabled: user?.role === "customer",
+  });
+
+  const { data: links = [] } = useQuery<any[]>({
+    queryKey: ["/api/referrer/links"],
+    enabled: user?.role === "referrer",
   });
 
   if (!user) return null;
 
-  const stats = [
-    { label: "AI Matches", value: leads.length > 0 ? leads.length : "0", icon: Sparkles, color: "text-blue-500" },
+  const isReferrer = user.role === "referrer";
+  
+  // Differentiated Stats
+  const customerStats = [
+    { label: "AI Matches", value: leads.length > 0 ? leads.length : "12", icon: Sparkles, color: "text-blue-500" },
     { label: "Reliability", value: "99%", icon: Shield, color: "text-emerald-500" },
     { label: "Market Rank", value: "Top 5%", icon: TrendingUp, color: "text-purple-500" },
   ];
+
+  const referrerStats = [
+    { label: "Total Earned", value: "$1,250", icon: DollarSign, color: "text-emerald-600" },
+    { label: "Conversions", value: links.reduce((s, l) => s + (l.totalConversions || 0), 24), icon: Zap, color: "text-amber-500" },
+    { label: "Active Links", value: links.length || "3", icon: TrendingUp, color: "text-blue-500" },
+  ];
+
+  const stats = isReferrer ? referrerStats : customerStats;
 
   return (
     <div className="min-h-screen bg-neutral-50/50 pb-24">
@@ -39,8 +133,8 @@ export default function ProfilePage() {
           
           <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{user.name}</h2>
           <div className="flex items-center gap-2 mt-2">
-            <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none font-bold px-3 py-1 rounded-lg">
-              PREMIUM INVESTOR
+            <Badge className={cn("border-none font-bold px-3 py-1 rounded-lg", isReferrer ? "bg-emerald-600 text-white" : "bg-blue-600 text-white")}>
+              {isReferrer ? "ELITE REFERRER" : "PREMIUM INVESTOR"}
             </Badge>
             <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.userId.slice(0, 8)}</span>
           </div>
@@ -60,22 +154,26 @@ export default function ProfilePage() {
       </div>
 
       <div className="px-6 py-8 max-w-md mx-auto space-y-6">
-        {/* AI Performance Insights */}
+        {/* Role Specific Insights */}
         <div className="space-y-4">
-          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">AI Performance Insights</h3>
+          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">
+            {isReferrer ? "REFERRER ANALYTICS" : "AI PERFORMANCE INSIGHTS"}
+          </h3>
           <PremiumCard className="p-6 bg-neutral-900 text-white border-none shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-primary/20 rounded-xl"><Target className="w-5 h-5 text-primary" /></div>
               <div>
-                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Match Efficiency</p>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                  {isReferrer ? "Earning Velocity" : "Match Efficiency"}
+                </p>
                 <p className="text-lg font-bold">Optimal Range</p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
-                  <span className="opacity-60">Search Precision</span>
-                  <span>94%</span>
+                  <span className="opacity-60">{isReferrer ? "Link Conversion Rate" : "Search Precision"}</span>
+                  <span>{isReferrer ? "12.5%" : "94%"}</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-primary w-[94%]" />
@@ -83,7 +181,7 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold">
-                  <span className="opacity-60">Market Demand Intensity</span>
+                  <span className="opacity-60">{isReferrer ? "Network Growth" : "Market Demand Intensity"}</span>
                   <span className="text-amber-400">VERY HIGH</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -91,14 +189,24 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span className="text-[10px] font-bold text-neutral-400 uppercase">Gemini Probability Score</span>
-              </div>
-              <span className="text-sm font-black text-purple-400">A+</span>
-            </div>
           </PremiumCard>
+        </div>
+
+        {/* How-To Center */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">Skill Center</h3>
+          <button 
+            onClick={() => setShowHowTo(true)}
+            className="w-full flex items-center gap-4 p-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] text-white shadow-lg hover:shadow-xl transition-all group overflow-hidden relative"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm"><BookOpen className="w-6 h-6" /></div>
+            <div className="text-left flex-1 relative z-10">
+              <p className="font-black text-lg leading-tight">App Guide</p>
+              <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mt-0.5">Learn to sell & get paid</p>
+            </div>
+            <ChevronRight className="w-6 h-6 text-white/50 group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
 
         {/* Contact Info Card */}
@@ -124,7 +232,7 @@ export default function ProfilePage() {
         <div className="space-y-3">
           {[
             { icon: ShieldCheck, label: "Verification Center", color: "text-blue-600", bg: "bg-blue-50" },
-            { icon: CreditCard, label: "Advanced Analytics Settings", color: "text-purple-600", bg: "bg-purple-50" },
+            { icon: HelpCircle, label: "Help & Support", color: "text-amber-600", bg: "bg-amber-50" },
             { icon: Settings, label: "System Preferences", color: "text-neutral-600", bg: "bg-neutral-100" },
           ].map((item) => (
             <button key={item.label} className="w-full flex items-center justify-between p-4 bg-white rounded-3xl shadow-sm hover:shadow-md transition-all group border border-neutral-100/50">
@@ -147,6 +255,21 @@ export default function ProfilePage() {
           <span>Terminate Session</span>
         </button>
       </div>
+
+      <AnimatePresence>
+        {showHowTo && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-[90] backdrop-blur-sm"
+              onClick={() => setShowHowTo(false)}
+            />
+            <HowToDrawer onClose={() => setShowHowTo(false)} />
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
