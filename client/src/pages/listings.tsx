@@ -162,7 +162,7 @@ function PropertyCard({ property, onDelete }: { property: Property; onDelete: ()
     e.stopPropagation();
     if (!user) return;
     
-    const code = generateCode(user.id, property.propertyType, property.city);
+    const code = generateCode(String(user.id), property.propertyType, property.city);
     const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}r/${code.shortCode}`;
     
     navigator.clipboard.writeText(shareUrl);

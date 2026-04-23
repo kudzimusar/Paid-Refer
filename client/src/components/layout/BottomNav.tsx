@@ -17,7 +17,7 @@ const CUSTOMER_NAV: NavItem[] = [
   { icon: Home, label: "Request", href: "/search" },
   { icon: MessageCircle, label: "Messages", href: "/chat" },
   { icon: Bell, label: "Alerts", href: "/notifications" },
-  { icon: BookOpen, label: "Academy", href: "/profile" },
+  { icon: BookOpen, label: "Academy", href: "/academy" },
   { icon: User, label: "Profile", href: "/profile" },
 ];
 
@@ -26,14 +26,14 @@ const AGENT_NAV: NavItem[] = [
   { icon: Users, label: "Leads", href: "/dashboard/leads" },
   { icon: MessageCircle, label: "Chat", href: "/chat" },
   { icon: Banknote, label: "Wallet", href: "/dashboard/settings/payments" },
-  { icon: BookOpen, label: "Academy", href: "/profile" },
+  { icon: BookOpen, label: "Academy", href: "/academy" },
 ];
 
 const REFERRER_NAV: NavItem[] = [
   { icon: TrendingUp, label: "Hub", href: "/refer" },
   { icon: Link2, label: "Links", href: "/refer/links" },
   { icon: Banknote, label: "Earnings", href: "/dashboard/settings/payments" },
-  { icon: BookOpen, label: "Academy", href: "/profile" },
+  { icon: BookOpen, label: "Academy", href: "/academy" },
   { icon: User, label: "Profile", href: "/profile" },
 ];
 
@@ -42,7 +42,7 @@ const ADMIN_NAV: NavItem[] = [
   { icon: Users, label: "Users", href: "/admin/users" },
   { icon: Shield, label: "Verify", href: "/admin/verify" },
   { icon: Banknote, label: "Payouts", href: "/admin/payouts" },
-  { icon: BookOpen, label: "Academy", href: "/profile" },
+  { icon: BookOpen, label: "Academy", href: "/academy" },
 ];
 
 const gridColsMap: Record<number, string> = {

@@ -1,5 +1,6 @@
 import { useAuthContext } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { Link } from "wouter";
 import { User, Settings, ShieldCheck, CreditCard, LogOut, ChevronRight, MapPin, Phone, Mail, Zap, Target, TrendingUp, Sparkles, Shield, BookOpen, DollarSign, Users, HelpCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,83 +9,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-function HowToDrawer({ onClose }: { onClose: () => void }) {
-  const categories = [
-    {
-      title: "Skills to Sell",
-      icon: DollarSign,
-      items: [
-        "Share your unique link on WhatsApp groups",
-        "Explain the benefit of AI-verified agents to friends",
-        "Target people moving to Zimbabwe or South Africa"
-      ]
-    },
-    {
-      title: "How to get Paid",
-      icon: Zap,
-      items: [
-        "Earn $5 per verified lead submission",
-        "Get 10% commission on closed property deals",
-        "Withdraw earnings via EcoCash, InnBucks or Bank"
-      ]
-    },
-    {
-      title: "Customer Journey",
-      icon: Users,
-      items: [
-        "Use the Search tool to define your needs",
-        "Let Gemini AI score and match top agents",
-        "Track progress in real-time on your dashboard"
-      ]
-    }
-  ];
 
-  return (
-    <motion.div
-      initial={{ y: "100%" }}
-      animate={{ y: 0 }}
-      exit={{ y: "100%" }}
-      transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="fixed inset-x-0 bottom-0 z-[100] bg-white rounded-t-[2.5rem] shadow-2xl p-8 pb-12 border-t border-neutral-100 max-h-[85vh] overflow-y-auto"
-    >
-      <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mb-8" />
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-black text-neutral-900">App Guide</h2>
-          <p className="text-sm text-neutral-500 font-medium">Master the Refer Intelligence platform</p>
-        </div>
-        <button onClick={onClose} className="p-3 bg-neutral-100 rounded-2xl hover:bg-neutral-200 transition-colors">
-          <X className="w-6 h-6 text-neutral-500" />
-        </button>
-      </div>
-
-      <div className="space-y-8">
-        {categories.map((cat) => (
-          <div key={cat.title} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-xl text-blue-600"><cat.icon className="w-5 h-5" /></div>
-              <h3 className="font-bold text-neutral-900">{cat.title}</h3>
-            </div>
-            <ul className="space-y-3">
-              {cat.items.map((item, i) => (
-                <li key={i} className="flex items-start gap-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-100">
-                  <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[10px] font-black text-blue-600 border border-blue-100 flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </div>
-                  <p className="text-sm text-neutral-700 font-medium leading-relaxed">{item}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-}
 
 export default function ProfilePage() {
   const { user, logout } = useAuthContext();
-  const [showHowTo, setShowHowTo] = useState(false);
 
   const { data: leads = [] } = useQuery<any[]>({
     queryKey: ["/api/customer/leads"],
@@ -196,18 +124,21 @@ export default function ProfilePage() {
         {/* How-To Center */}
         <div className="space-y-4">
           <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] px-1">Skill Center</h3>
-          <button 
-            onClick={() => setShowHowTo(true)}
-            className="w-full flex items-center gap-4 p-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] text-white shadow-lg hover:shadow-xl transition-all group overflow-hidden relative"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm"><BookOpen className="w-6 h-6" /></div>
-            <div className="text-left flex-1 relative z-10">
-              <p className="font-black text-lg leading-tight">App Guide</p>
-              <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mt-0.5">Learn to sell & get paid</p>
-            </div>
-            <ChevronRight className="w-6 h-6 text-white/50 group-hover:translate-x-1 transition-transform" />
-          </button>
+
+
+          <Link href="/academy">
+            <button
+              className="w-full flex items-center gap-4 p-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] text-white shadow-lg hover:shadow-xl transition-all group overflow-hidden relative"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm"><BookOpen className="w-6 h-6" /></div>
+              <div className="text-left flex-1 relative z-10">
+                <p className="font-black text-lg leading-tight">App Guide</p>
+                <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mt-0.5">Learn to sell & get paid</p>
+              </div>
+              <ChevronRight className="w-6 h-6 text-white/50 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </Link>
         </div>
 
         {/* Contact Info Card */}
@@ -257,20 +188,6 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <AnimatePresence>
-        {showHowTo && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-[90] backdrop-blur-sm"
-              onClick={() => setShowHowTo(false)}
-            />
-            <HowToDrawer onClose={() => setShowHowTo(false)} />
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
