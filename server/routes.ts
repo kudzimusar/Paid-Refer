@@ -794,11 +794,13 @@ Empowering local agents & referrers.
       // Trigger Scoring Update
       if (updates.status === 'contacted' || updates.status === 'closed') {
         triggerAgentScoringUpdate(lead.agentId);
-      if (updates.status === 'closed') {
-        triggerReviewRequest(lead.id, lead.customerId, lead.agentId).catch(console.error);
-        processTieredCommissions(lead.id).catch(err => {
-          console.error("Tiered commission processing failed:", err);
-        });
+        
+        if (updates.status === 'closed') {
+          triggerReviewRequest(lead.id, lead.customerId, lead.agentId).catch(console.error);
+          processTieredCommissions(lead.id).catch(err => {
+            console.error("Tiered commission processing failed:", err);
+          });
+        }
       }
       
       // AI MATCH QUALITY FEEDBACK (Optional n8n trigger)
