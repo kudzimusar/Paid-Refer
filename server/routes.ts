@@ -1899,6 +1899,83 @@ Empowering local agents & referrers.
     }
   });
 
+  app.get("/api/admin/verifications", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const verifications = await db.select({
+        id: agentVerifications.id,
+        userId: agentVerifications.agentId,
+        userName: users.firstName,
+        userLastName: users.lastName,
+        documentType: agentVerifications.documentType,
+        confidence: agentVerifications.aiConfidence,
+        status: agentVerifications.verificationStatus,
+        createdAt: agentVerifications.createdAt
+      })
+      .from(agentVerifications)
+      .leftJoin(users, eq(agentVerifications.agentId, users.id))
+      .where(eq(agentVerifications.verificationStatus, "pending" as any));
+      
+      res.json(verifications);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch verifications" });
+    }
+  });
+
+  app.post("/api/admin/verifications/:id/approve", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [verification] = await db.select().from(agentVerifications).where(eq(agentVerifications.id, id));
+      
+      if (!verification) return res.status(404).json({ message: "Verification record not found" });
+
+      // Update verification status
+      await db.update(agentVerifications)
+        .set({ verificationStatus: "approved" as any, updatedAt: new Date() })
+        .where(eq(agentVerifications.id, id));
+
+      // Update user verification state
+      await storage.updateUser(verification.agentId, { 
+        isVerified: true, 
+        onboardingStatus: 'completed' 
+      });
+
+      // Recalculate Trust Score
+      await triggerAgentScoringUpdate(verification.agentId);
+
+      // Notify Agent
+      await storage.createNotification({
+        userId: verification.agentId,
+        title: "Account Verified!",
+        body: "Your identity documents have been approved. You now have full access to premium leads.",
+        type: "verification"
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: "Approval failed" });
+    }
+  });
+
+  app.get("/api/admin/payouts", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const payouts = await db.select({
+        id: commissionSettlements.id,
+        amount: commissionSettlements.amount,
+        status: commissionSettlements.status,
+        agentName: users.firstName,
+        agentLastName: users.lastName,
+        createdAt: commissionSettlements.createdAt
+      })
+      .from(commissionSettlements)
+      .leftJoin(users, eq(commissionSettlements.payerId, users.id))
+      .where(eq(commissionSettlements.status, "pending"));
+      
+      res.json(payouts);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch payouts" });
+    }
+  });
+
   app.post("/api/agent/:id/recalculate-trust", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const score = await recalculateAgentTrustScore(req.params.id);

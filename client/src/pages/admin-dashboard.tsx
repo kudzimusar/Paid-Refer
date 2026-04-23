@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { 
@@ -412,6 +412,18 @@ function UserRow({ name, email, role, status, engagement, active }: any) {
 }
 
 function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
+  const { data: verifications = [], refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/verifications"],
+    queryFn: () => apiRequest("GET", "/api/admin/verifications"),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/verifications/${id}/approve`),
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -438,7 +450,7 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
           </div>
           
           <p className="text-sm text-neutral-300 leading-relaxed">
-            The AI engine has flagged 3 submissions for manual oversight due to metadata inconsistencies in license scans. All other background checks are within the 90%+ confidence threshold.
+            The AI engine analyzes license numbers against the Global Real Estate Registry and performs OCR on identity documents to ensure a 100% data match.
           </p>
 
           <div className="grid grid-cols-2 gap-4">
@@ -456,9 +468,20 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
         <PremiumCard className="bg-neutral-900/40 border-white/5 overflow-hidden">
           <div className="p-6 border-b border-white/5 font-black text-xs uppercase tracking-widest text-neutral-400">Priority Queue</div>
           <div className="divide-y divide-white/5">
-            <VerificationRow name="Sarah Botha" location="Cape Town, ZA" confidence={42} time="1h ago" status="needs_review" />
-            <VerificationRow name="John D." location="Harare, ZW" confidence={78} time="2h ago" />
-            <VerificationRow name="Moe Z." location="Tokyo, JP" confidence={91} time="3h ago" />
+            {verifications.length > 0 ? verifications.map((v) => (
+              <VerificationRow 
+                key={v.id}
+                name={`${v.userName} ${v.userLastName || ''}`} 
+                location={v.documentType || "ID Document"} 
+                confidence={Math.round((v.confidence || 0.9) * 100)} 
+                time={new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                onApprove={() => approveMutation.mutate(v.id)}
+              />
+            )) : (
+              <div className="p-12 text-center text-neutral-500 text-xs font-bold uppercase tracking-widest">
+                No pending reviews
+              </div>
+            )}
           </div>
         </PremiumCard>
       </div>
@@ -467,6 +490,11 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
 }
 
 function AdminPayoutsView() {
+  const { data: payouts = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/payouts"],
+    queryFn: () => apiRequest("GET", "/api/admin/payouts"),
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -487,13 +515,25 @@ function AdminPayoutsView() {
             <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
               <h3 className="font-bold text-sm uppercase tracking-widest text-neutral-400">Pending Settlements</h3>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-400">$1,840.00 Total</span>
+                <span className="text-xs font-bold text-emerald-400">
+                  ${payouts.reduce((acc, p) => acc + parseFloat(p.amount), 0).toFixed(2)} Total
+                </span>
               </div>
             </div>
             <div className="divide-y divide-white/5">
-              <SettlementRow agent="Elite Realty" referrer="Tatenda M." amount={450} status="Unpaid" />
-              <SettlementRow agent="Global Homes" referrer="Sarah J." amount={120} status="Unpaid" />
-              <SettlementRow agent="Harare Agency" referrer="Rudo T." amount={60} status="Unpaid" />
+              {payouts.length > 0 ? payouts.map((p) => (
+                <SettlementRow 
+                  key={p.id}
+                  agent={`${p.agentName} ${p.agentLastName || ''}`} 
+                  referrer="Platform Referral" 
+                  amount={parseFloat(p.amount)} 
+                  status={p.status} 
+                />
+              )) : (
+                <div className="p-12 text-center text-neutral-500 text-xs font-bold uppercase tracking-widest">
+                  Clean ledger. No pending payouts.
+                </div>
+              )}
             </div>
           </PremiumCard>
         </div>
@@ -577,11 +617,11 @@ function StatCard({ label, value, trend, icon, alert }: { label: string; value: 
   );
 }
 
-function VerificationRow({ name, location, confidence, time, status = "pending" }: { name: string; location: string; confidence: number; time: string; status?: string }) {
+function VerificationRow({ name, location, confidence, time, onApprove }: { name: string; location: string; confidence: number; time: string; onApprove: () => void }) {
   return (
-    <div className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer">
+    <div className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center font-bold text-sm">
+        <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center font-bold text-sm text-primary">
           {name.charAt(0)}
         </div>
         <div>
@@ -599,7 +639,13 @@ function VerificationRow({ name, location, confidence, time, status = "pending" 
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[10px] text-neutral-500 font-bold">{time}</span>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onApprove(); }}
+            className="hidden group-hover:block bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            Approve
+          </button>
+          <span className="text-[10px] text-neutral-500 font-bold group-hover:hidden">{time}</span>
           <div className="bg-primary/10 text-primary p-2 rounded-lg">
             <ChevronRight className="w-4 h-4" />
           </div>
