@@ -111,6 +111,12 @@ function LinkRow({ link }: { link: MockReferralLink }) {
             {link.targetArea && (
               <p className="text-xs text-neutral-500 font-medium">📍 {link.targetArea}</p>
             )}
+            <div className="flex items-center gap-1.5 bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100/50 w-fit">
+              <ShieldCheck className="w-3 h-3 text-blue-600" />
+              <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">
+                Security Receipt: {Math.random().toString(36).substring(2, 10).toUpperCase()}
+              </span>
+            </div>
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-lg font-extrabold text-emerald-600">${earnings.toFixed(0)}</p>

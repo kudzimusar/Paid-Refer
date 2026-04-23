@@ -148,7 +148,6 @@ function AppContent() {
             <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer"]} component={NotificationsPage} />
             <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer"]} component={AcademyPage} />
             <ProtectedRoute path="/profile" roles={["customer", "referrer"]} component={ProfilePage} />
-            <ProtectedRoute path="/profilepage" roles={["customer", "referrer"]} component={ProfilePage} />
 
             {/* ── Referrer ── */}
             <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />

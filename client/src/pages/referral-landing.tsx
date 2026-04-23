@@ -93,6 +93,25 @@ export default function ReferralLandingPage() {
           <span className="text-xl font-black text-neutral-900 tracking-tighter">Refer. <span className="text-blue-600">Property</span></span>
         </div>
 
+        {/* ── Trust Bridge (Referred By) ── */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-10 bg-gray-50 border border-gray-100 p-4 rounded-[2rem] flex items-center gap-4 group hover:border-blue-200 transition-all"
+        >
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-50 group-hover:bg-blue-50 transition-colors">
+            <User className="w-6 h-6 text-neutral-900 group-hover:text-blue-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none mb-1">Introduced By</p>
+            <p className="font-black text-neutral-900 tracking-tight">Verified Intelligence Partner</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <ShieldCheck className="w-3 h-3 text-emerald-500" />
+              <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">POI ID: {shortCode}-SECURE</span>
+            </div>
+          </div>
+        </motion.div>
+
         {/* ── Hero Content ── */}
         <div className="flex-1 space-y-10">
           <div className="space-y-4">

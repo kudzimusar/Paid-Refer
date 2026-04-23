@@ -193,6 +193,24 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+      {/* ── Security Banner (Ledger Protection) ── */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-6 mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center gap-4 group cursor-help"
+      >
+        <div className="p-2.5 bg-emerald-500 rounded-2xl text-white group-hover:scale-110 transition-transform shadow-sm">
+          <ShieldCheck className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest leading-none mb-1">Ledger Protected</p>
+          <p className="text-xs font-black text-emerald-900 tracking-tight leading-tight">Your search is secured by an immutable digital ledger. Agents are verified and accountable.</p>
+        </div>
+        <div className="p-2 bg-emerald-100/50 rounded-xl">
+          <Info className="w-3.5 h-3.5 text-emerald-600" />
+        </div>
+      </motion.div>
+
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         {isLoading ? (
           <div className="space-y-4"><SkeletonCard /><SkeletonCard /></div>

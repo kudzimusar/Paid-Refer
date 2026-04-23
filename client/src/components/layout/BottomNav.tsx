@@ -76,7 +76,7 @@ export function BottomNav() {
           const isActive =
             item.href === "/"
               ? location === "/"
-              : location.startsWith(item.href);
+              : location === item.href || (location.startsWith(item.href) && item.href !== "/refer" && item.href !== "/dashboard" && item.href !== "/search" && item.href !== "/profile");
           const Icon = item.icon;
 
           return (
