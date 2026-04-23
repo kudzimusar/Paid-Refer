@@ -154,8 +154,9 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function CustomerDashboard() {
   const { user } = useAuthContext();
-  const [, setLocation] = useLocation();
-  const [showForm, setShowForm] = useState(false);
+  const [location, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const [showForm, setShowForm] = useState(searchParams.get("action") === "new-request");
 
   const { data: leads = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/customer/leads"],

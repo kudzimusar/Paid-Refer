@@ -17,6 +17,9 @@ interface AuthUser {
   onboardingStatus: string;
   subscriptionStatus?: string;
   isVerified?: boolean;
+  licenseNumber?: string;
+  coverageAreas?: string[];
+  propertyTypes?: string[];
 }
 
 interface AuthContextType {
@@ -52,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone: localStorage.getItem('demo_phone') || '+263808120135',
           onboardingStatus: 'completed',
           isVerified: true,
+          licenseNumber: localStorage.getItem('demo_licenseNumber') || undefined,
+          coverageAreas: JSON.parse(localStorage.getItem('demo_coverageAreas') || '[]'),
+          propertyTypes: JSON.parse(localStorage.getItem('demo_propertyTypes') || '[]'),
         });
       } else {
         setUser(null);

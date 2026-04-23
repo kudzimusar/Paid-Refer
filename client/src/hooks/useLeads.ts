@@ -3,6 +3,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { isDemoMode } from "@/lib/demoMode";
 import { getMockAgentLeads } from "@/lib/mockData";
 import { apiRequest } from "@/lib/queryClient";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export type LeadStatus =
   | "new"
@@ -60,6 +61,7 @@ export interface LeadFilters {
 
 export function useLeads() {
   const { user } = useAuthContext();
+  const { sendNotification } = useNotifications();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +154,23 @@ export function useLeads() {
   }, [fetchLeads]);
 
   const acceptLead = useCallback(async (leadId: number) => {
+    if (isDemoMode()) {
+      await new Promise(r => setTimeout(r, 400));
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId ? { ...l, status: "in_progress", conversationId: `conv_${leadId}` } : l
+        )
+      );
+      
+      sendNotification({
+        type: "status",
+        title: "Lead Accepted",
+        message: `You've accepted the lead for ${leads.find(l => l.id === leadId)?.customerName || 'a customer'}. Chat is now active.`,
+      });
+      
+      return true;
+    }
+
     const res = await fetch(`/api/leads/${leadId}/accept`, {
       method: "POST",
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -165,9 +184,22 @@ export function useLeads() {
       );
     }
     return res.ok;
-  }, []);
+  }, [sendNotification, leads]);
 
   const declineLead = useCallback(async (leadId: number, reason: string) => {
+    if (isDemoMode()) {
+      await new Promise(r => setTimeout(r, 400));
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      
+      sendNotification({
+        type: "system",
+        title: "Lead Declined",
+        message: `You declined the lead. Reason: ${reason}.`,
+      });
+      
+      return true;
+    }
+
     const res = await fetch(`/api/leads/${leadId}/decline`, {
       method: "POST",
       headers: {
@@ -180,9 +212,58 @@ export function useLeads() {
       setLeads((prev) => prev.filter((l) => l.id !== leadId));
     }
     return res.ok;
-  }, []);
+  }, [sendNotification]);
 
   const closeDeal = useCallback(async (leadId: number, dealValueUsd: number) => {
+    if (isDemoMode()) {
+      await new Promise(r => setTimeout(r, 800));
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId ? { ...l, status: "deal_closed" } : l
+        )
+      );
+
+      const lead = leads.find(l => l.id === leadId);
+      
+      // TRIGGER NOTIFICATION LOOP
+      // 1. Agent Notification
+      sendNotification({
+        type: "conversion",
+        title: "Deal Closed! 🥂",
+        message: `Congratulations! You closed the deal for ${lead?.customerName}. Total: $${dealValueUsd.toLocaleString()}.`,
+      });
+
+      // 2. Referrer Notification (Simulation)
+      // In a real system, the server would push this. In demo, we simulate the "loop"
+      setTimeout(() => {
+        sendNotification({
+          type: "conversion",
+          title: "Commission Earned!",
+          message: `Your referral link converted! You've earned a commission from ${lead?.customerName}'s deal.`,
+        });
+      }, 2000);
+
+      // 3. Customer Notification
+      setTimeout(() => {
+        sendNotification({
+          type: "status",
+          title: "Handshake Complete",
+          message: "Your deal is closed and secured in the Refer Ledger. Thank you for using Paid-Refer!",
+        });
+      }, 1000);
+
+      // 4. Admin Notification (Simulation)
+      setTimeout(() => {
+        sendNotification({
+          type: "system",
+          title: "[ADMIN] Deal Ledger Updated",
+          message: `New settlement recorded for ${lead?.customerName}. Referral hierarchy verified.`,
+        });
+      }, 3000);
+
+      return true;
+    }
+
     const res = await fetch(`/api/leads/${leadId}/close`, {
       method: "POST",
       headers: {
@@ -199,10 +280,27 @@ export function useLeads() {
       );
     }
     return res.ok;
-  }, []);
+  }, [sendNotification, leads]);
 
   const markLost = useCallback(async (leadId: number, reason: string) => {
-    await fetch(`/api/leads/${leadId}/lost`, {
+    if (isDemoMode()) {
+      await new Promise(r => setTimeout(r, 400));
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId ? { ...l, status: "lost" } : l
+        )
+      );
+      
+      sendNotification({
+        type: "system",
+        title: "Lead Marked as Lost",
+        message: `Lead has been archived. Reason: ${reason}.`,
+      });
+      
+      return true;
+    }
+
+    const res = await fetch(`/api/leads/${leadId}/lost`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -210,12 +308,15 @@ export function useLeads() {
       },
       body: JSON.stringify({ reason }),
     });
-    setLeads((prev) =>
-      prev.map((l) =>
-        l.id === leadId ? { ...l, status: "lost" } : l
-      )
-    );
-  }, []);
+    if (res.ok) {
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId ? { ...l, status: "lost" } : l
+        )
+      );
+    }
+    return res.ok;
+  }, [sendNotification]);
 
   return {
     leads,

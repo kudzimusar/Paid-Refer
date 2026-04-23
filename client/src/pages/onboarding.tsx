@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, ArrowRight, Mail, Phone, MessageCircle, Check, Sparkles } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { isDemoMode } from "@/lib/demoMode";
 import { useNotifications } from "../contexts/NotificationContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -220,10 +221,12 @@ function AgentProfileStep({ onNext, onBack }: { onNext: (data: any) => void; onB
         <div className="max-h-36 overflow-y-auto space-y-1 border border-gray-200 rounded-xl p-3 no-scrollbar">
           {AREAS_BY_ROLE.map((area) => (
             <label key={area} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer">
-              <input type="checkbox" value={area}
+              <input type="checkbox" 
+                value={area}
+                checked={watch("areasCovered")?.includes(area)}
                 onChange={(e) => {
                   const current = watch("areasCovered") ?? [];
-                  setValue("areasCovered", e.target.checked ? [...current, area] : current.filter((a: string) => a !== area));
+                  setValue("areasCovered", e.target.checked ? [...current, area] : current.filter((a: string) => a !== area), { shouldValidate: true });
                 }}
                 className="w-4 h-4 rounded border-gray-300 text-primary"
               />
@@ -540,6 +543,11 @@ export default function OnboardingPage() {
   };
 
   const handleProfileNext = (data: any) => {
+    if (isDemoMode()) {
+      localStorage.setItem('demo_coverageAreas', JSON.stringify(data.areasCovered));
+      localStorage.setItem('demo_propertyTypes', JSON.stringify(data.propertyTypes));
+      localStorage.setItem('demo_licenseNumber', data.licenseNumber);
+    }
     profileMutation.mutate(data);
   };
 

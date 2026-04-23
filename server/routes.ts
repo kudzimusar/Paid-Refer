@@ -86,7 +86,7 @@ import { valuatePropertyRequest } from "./lib/property-valuation";
 import { isAgentAvailable } from "./lib/agent-availability";
 import { generateTenancyAgreement } from "./lib/document-generator";
 import { trackEvent } from "./lib/analytics";
-import { exchangeRates, flaggedContent, agentAvailability, disputeMessages, savedSearches, cookieConsents } from "@shared/schema";
+import { exchangeRates, flaggedContent, agentAvailability, disputeMessages, savedSearches, cookieConsents, commissionSettlements } from "@shared/schema";
 import { computeMarketPulse } from "./lib/market-pulse";
 import { predictDealOutcome } from "./lib/deal-predictor";
 import { generateNeighbourhoodProfile } from "./lib/neighbourhood-intelligence";

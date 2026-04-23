@@ -4,12 +4,13 @@ import { useParams, Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { ArrowLeft, MessageCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import type { Conversation } from "@/types";
 
 export default function Chat() {
-  const { conversationId } = useParams();
-  const { user } = useAuth();
+  const params = useParams();
+  const conversationId = params.id || params.conversationId;
+  const { user } = useAuthContext();
 
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ['/api/conversations'],
@@ -89,7 +90,7 @@ export default function Chat() {
                   : "Accept leads to start conversations with customers"
                 }
               </p>
-              <Link href={user?.role === 'customer' ? '/search' : '/dashboard/leads'}>
+              <Link href={user?.role === 'customer' ? '/search?action=new-request' : '/dashboard/leads'}>
                 <button className="bg-primary text-white px-6 py-2 rounded-lg font-medium">
                   {user?.role === 'customer' ? 'Find Apartment' : 'View Leads'}
                 </button>

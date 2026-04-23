@@ -20,6 +20,8 @@ import {
   type InsertPayment,
   type Notification,
   type InsertNotification,
+  type CommissionSettlement,
+  type InsertCommissionSettlement,
   users,
   customerRequests,
   agentProfiles,
@@ -28,14 +30,14 @@ import {
   leads,
   conversations,
   messages,
+  commissionSettlements,
   properties,
   payments,
   notifications,
   workflowLogs,
   agentPreRegistrations,
   balances,
-  commissionSettlements,
-} from "@shared/schema.ts";
+} from "@shared/schema";
 import { db } from "./db.ts";
 import { eq, or, and, sql } from "drizzle-orm";
 import { IStorage } from "./storage.ts";

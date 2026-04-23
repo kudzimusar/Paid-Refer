@@ -603,6 +603,7 @@ export const flaggedContent = pgTable("flagged_content", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+
 // NOTE: Performance indexes should be defined inside each pgTable's 3rd arg
 // (see exchangeRates above for the correct pattern).
 // The following standalone index calls were removed because drizzle-orm
@@ -1021,6 +1022,12 @@ export const insertSavedSearchSchema = createInsertSchema(savedSearches).omit({
   createdAt: true,
 });
 
+export const insertCommissionSettlementSchema = createInsertSchema(commissionSettlements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCookieConsentSchema = createInsertSchema(cookieConsents).omit({
   id: true,
   consentedAt: true,
@@ -1038,3 +1045,4 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type InsertCommissionSettlement = z.infer<typeof insertCommissionSettlementSchema>;

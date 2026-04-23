@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLeads, type Lead } from "../hooks/useLeads";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,7 +34,9 @@ export default function AgentLeadDashboard() {
         message: "Customer matched. Start a conversation now.",
         link: "/chat"
       });
+      return true;
     }
+    return false;
   };
 
   const handleCloseDeal = async (id: number, val: number) => {
@@ -44,7 +47,9 @@ export default function AgentLeadDashboard() {
         title: "Deal Closed! 💰",
         message: `Congratulations! A deal has been successfully finalized. Commissions are being processed.`,
       });
+      return true;
     }
+    return false;
   };
 
   const { data: settlements = [] } = useQuery<any[]>({

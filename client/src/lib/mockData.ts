@@ -472,7 +472,8 @@ export interface MockLead {
   status: string;
   customerName: string;
   propertyType: string;
-  preferredArea: string;
+  city: string;
+  preferredLocation: string;
   budgetMin: string;
   budgetMax: string;
   matchScore: number;
@@ -487,7 +488,8 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     status: "pending",
     customerName: "Chipo Ndlovu",
     propertyType: "2-Bedroom Flat",
-    preferredArea: "Borrowdale",
+    city: "Harare",
+    preferredLocation: "Borrowdale",
     budgetMin: "700",
     budgetMax: "900",
     matchScore: 0.91,
@@ -500,7 +502,8 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     status: "pending",
     customerName: "Tapiwa Moyo",
     propertyType: "3-Bedroom House",
-    preferredArea: "Mount Pleasant",
+    city: "Harare",
+    preferredLocation: "Mount Pleasant",
     budgetMin: "1000",
     budgetMax: "1400",
     matchScore: 0.78,
@@ -513,7 +516,8 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     status: "contacted",
     customerName: "Rudo Chikwamba",
     propertyType: "1-Bedroom Studio",
-    preferredArea: "Avondale",
+    city: "Harare",
+    preferredLocation: "Avondale",
     budgetMin: "400",
     budgetMax: "600",
     matchScore: 0.84,
@@ -526,7 +530,8 @@ export const MOCK_AGENT_LEADS: MockLead[] = [
     status: "in_progress",
     customerName: "Linda Matsumoto",
     propertyType: "Townhouse",
-    preferredArea: "Highlands",
+    city: "Harare",
+    preferredLocation: "Highlands",
     budgetMin: "1200",
     budgetMax: "1800",
     matchScore: 0.69,

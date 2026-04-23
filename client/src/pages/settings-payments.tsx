@@ -13,7 +13,9 @@ import {
   LayoutDashboard,
   ChevronRight,
   Clock,
-  Wallet
+  Wallet,
+  Check,
+  X
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +23,7 @@ import { PremiumCard } from "@/components/ui/premium-card";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SectionTitle } from "@/components/ui/primitives";
 import { NavLogo } from "@/components/ui/Logo";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PayoutStatus {
   connected: boolean;
@@ -32,6 +35,8 @@ interface PayoutStatus {
 export default function SettingsPaymentsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState("Elite Agent Pro");
 
   const { data: status, isLoading: statusLoading } = useQuery<PayoutStatus>({
     queryKey: ["/api/payments/connect/status"],
@@ -186,11 +191,13 @@ export default function SettingsPaymentsPage() {
                   <Zap className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-neutral-900">Elite Agent Pro</h4>
-                  <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wider mt-0.5">$49.99 / MONTHLY</p>
+                  <h4 className="font-bold text-neutral-900">{currentPlan}</h4>
+                  <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wider mt-0.5">
+                    {currentPlan.includes("Enterprise") ? "$299.99 / MONTHLY" : "$49.99 / MONTHLY"}
+                  </p>
                 </div>
                 <div className="bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ml-auto">
-                  Premium
+                  {currentPlan.includes("Enterprise") ? "Enterprise" : "Premium"}
                 </div>
               </div>
 
@@ -200,9 +207,7 @@ export default function SettingsPaymentsPage() {
                   Renews May 12, 2026
                 </div>
                 <button 
-                  onClick={() => {
-                    toast({ title: "Opening Plan Selector", description: "Loading Elite and Enterprise options..." });
-                  }}
+                  onClick={() => setShowPlanSelector(true)}
                   className="text-xs font-bold text-primary hover:underline"
                 >
                   Change Plan
@@ -211,6 +216,74 @@ export default function SettingsPaymentsPage() {
             </div>
           </PremiumCard>
         </div>
+
+        {/* Plan Selector Modal */}
+        <AnimatePresence>
+          {showPlanSelector && (
+            <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100] flex items-end justify-center">
+              <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                className="bg-white w-full max-w-lg rounded-t-[32px] p-8 space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-black text-neutral-900">Select Pro Plan</h3>
+                  <button onClick={() => setShowPlanSelector(false)} className="p-2 bg-neutral-100 rounded-full">
+                    <X className="w-5 h-5 text-neutral-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    { 
+                      name: "Elite Agent Pro", 
+                      price: "49.99", 
+                      features: ["Unlimited Leads", "Priority Matching", "WhatsApp Notifications", "Basic CRM"],
+                      color: "bg-indigo-50 border-indigo-200"
+                    },
+                    { 
+                      name: "Enterprise Intelligence", 
+                      price: "299.99", 
+                      features: ["Team Management", "API Access", "Custom AI Models", "Dedicated Manager"],
+                      color: "bg-neutral-900 text-white border-neutral-800"
+                    }
+                  ].map((plan) => (
+                    <button 
+                      key={plan.name}
+                      onClick={() => {
+                        setCurrentPlan(plan.name);
+                        setShowPlanSelector(false);
+                        toast({ title: "Plan Updated", description: `You are now on the ${plan.name} plan.` });
+                      }}
+                      className={`w-full p-6 rounded-3xl border-2 text-left transition-all ${
+                        currentPlan === plan.name ? "ring-4 ring-primary/20 border-primary" : "border-neutral-100"
+                      } ${plan.color}`}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="font-black text-lg">{plan.name}</p>
+                          <p className={`text-2xl font-black ${plan.name.includes("Enterprise") ? "text-white" : "text-neutral-900"}`}>
+                            ${plan.price}<span className="text-sm font-medium opacity-60">/mo</span>
+                          </p>
+                        </div>
+                        {currentPlan === plan.name && <CheckCircle2 className="w-6 h-6 text-primary" />}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {plan.features.map(f => (
+                          <div key={f} className="flex items-center gap-2">
+                            <Check className={`w-3 h-3 ${plan.name.includes("Enterprise") ? "text-primary" : "text-emerald-500"}`} />
+                            <span className="text-[10px] font-bold uppercase tracking-tight opacity-80">{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Security & Compliance */}
         <div className="bg-neutral-50 rounded-3xl p-6 flex gap-4 items-start">

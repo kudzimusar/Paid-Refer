@@ -44,7 +44,7 @@ export default function Home() {
         
         <div className="space-y-4 mb-8">
           {(!user?.role || user?.role === 'customer') && (
-            <Link href="/customer-form">
+            <Link href="/search?action=new-request">
               <Button className="w-full bg-primary text-white py-4 rounded-xl font-semibold shadow-lg">
                 <HomeIcon className="w-5 h-5 mr-2" />
                 Find an Apartment
