@@ -151,6 +151,8 @@ export default function AdminDashboard() {
                   status="needs_review"
                 />
               </div>
+            </PremiumCard>
+
             {/* AI Network Oversight Panel */}
             <PremiumCard className="bg-neutral-800/40 border-neutral-800 overflow-hidden">
               <div className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b border-neutral-800 flex items-center justify-between">

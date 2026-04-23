@@ -450,10 +450,6 @@ function AddListingModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   />
                 </div>
               </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div className="space-y-3">
                 <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest pl-1">Property Owner (Cashback Eligibility)</label>
