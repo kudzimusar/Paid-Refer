@@ -4,7 +4,7 @@ import { storage } from "../storage";
 export interface AuthUser {
   id: string;
   uid: string; // Firebase UID
-  role: "agent" | "customer" | "referrer" | "admin" | "house_owner";
+  role: "agent" | "customer" | "referrer" | "admin" | "house_owner" | "super_admin";
   country: "ZW" | "ZA" | "JP";
   subscriptionStatus?: string;
   email?: string;

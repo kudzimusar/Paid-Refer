@@ -154,6 +154,7 @@ export class MemStorage implements IStorage {
       subscriptionRenewsAt: existing?.subscriptionRenewsAt ?? null,
       firebaseUid: existing?.firebaseUid ?? null,
       referredByUserId: userData.referredByUserId ?? existing?.referredByUserId ?? null,
+      lastActiveAt: existing?.lastActiveAt ?? now,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
