@@ -1959,15 +1959,13 @@ Empowering local agents & referrers.
 
   app.get("/api/admin/payouts", requireAuth, requireRole("admin"), async (req, res) => {
     try {
-      const payers = alias(users, "payers");
-      const payees = alias(users, "payees");
-
       const payouts = await db.select({
         id: commissionSettlements.id,
         amount: commissionSettlements.amount,
         status: commissionSettlements.status,
         agentName: users.firstName,
         agentLastName: users.lastName,
+        referrerName: sql<string>`'System'`, // Placeholder for now or join with referrer
         createdAt: commissionSettlements.createdAt
       })
       .from(commissionSettlements)
@@ -1977,6 +1975,43 @@ Empowering local agents & referrers.
       res.json(payouts);
     } catch (err) {
       res.status(500).json({ error: "Failed to fetch payouts" });
+    }
+  });
+
+  app.post("/api/admin/payouts/:id/settle", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [settlement] = await db.select().from(commissionSettlements).where(eq(commissionSettlements.id, id));
+      if (!settlement) return res.status(404).json({ message: "Settlement not found" });
+
+      await storage.updateSettlementStatus(id, 'paid');
+      
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: "Settlement failed" });
+    }
+  });
+
+  app.get("/api/admin/users", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const allUsers = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+        role: users.role,
+        isVerified: users.isVerified,
+        onboardingStatus: users.onboardingStatus,
+        lastActiveAt: users.lastActiveAt,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt));
+      
+      res.json(allUsers);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch users" });
     }
   });
 

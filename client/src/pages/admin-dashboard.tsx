@@ -13,17 +13,16 @@ import {
   CheckCircle2, 
   Clock, 
   ChevronRight,
-  Plus,
-  Filter,
-  MoreVertical,
   LayoutDashboard,
   BrainCircuit,
   Globe,
   Compass,
   Search,
   Zap,
-  Database
+  Database,
+  FileText
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { NavLogo } from "@/components/ui/Logo";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,7 +44,8 @@ interface AdminMetrics {
 }
 
 export default function AdminDashboard() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
   const { data: metrics, isLoading } = useQuery<AdminMetrics>({
     queryKey: ["/api/admin/metrics"],
     queryFn: () => apiRequest("GET", "/api/admin/metrics"),
@@ -71,6 +71,8 @@ export default function AdminDashboard() {
         return <AdminUsersView />;
       case "/admin/verify":
         return <AdminVerifyView metrics={metrics} />;
+      case "/admin/registry":
+        return <AdminRegistryView />;
       case "/admin/payouts":
         return <AdminPayoutsView />;
       default:
@@ -80,23 +82,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 pb-20 selection:bg-primary/10">
-      {/* Header */}
       <header className="border-b border-neutral-200/50 bg-white/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <NavLogo />
             <div className="hidden lg:block h-8 w-px bg-neutral-200" />
+            {/* Navigation - Hidden on mobile/tablet, shown on desktop */}
             <nav className="hidden md:flex items-center gap-1 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
               <NavHeaderLink label="Pulse" active={location === "/admin"} icon={<Activity />} href="/admin" />
               <NavHeaderLink label="Users" active={location === "/admin/users"} icon={<Users />} href="/admin/users" />
               <NavHeaderLink label="Verify" active={location === "/admin/verify"} icon={<ShieldCheck />} href="/admin/verify" />
+              <NavHeaderLink label="Registry" active={location === "/admin/registry"} icon={<Globe />} href="/admin/registry" />
               <NavHeaderLink label="Ledger" active={location === "/admin/payouts"} icon={<CreditCard />} href="/admin/payouts" />
             </nav>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              System Healthy
+              Ecosystem Healthy
             </div>
             <button className="bg-white hover:bg-neutral-50 text-neutral-600 p-2.5 rounded-2xl border border-neutral-200 transition-all">
               <Search className="w-5 h-5" />
@@ -113,9 +116,10 @@ export default function AdminDashboard() {
 }
 
 function NavHeaderLink({ label, active, icon, href }: { label: string; active: boolean; icon: React.ReactNode; href: string }) {
+  const [, setLocation] = useLocation();
   return (
     <button 
-      onClick={() => window.location.href = href}
+      onClick={() => setLocation(href)}
       className={cn(
         "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
         active ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-neutral-500 hover:text-neutral-900 hover:bg-white"
@@ -128,6 +132,21 @@ function NavHeaderLink({ label, active, icon, href }: { label: string; active: b
 }
 
 function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsights: any }) {
+  const [, setLocation] = useLocation();
+  const { data: verifications, refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/verifications"],
+    queryFn: () => apiRequest("GET", "/api/admin/verifications"),
+  });
+
+  const { toast } = useToast();
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/verifications/${id}/approve`),
+    onSuccess: () => {
+      toast({ title: "Approved", description: "Stakeholder verified successfully." });
+      refetch();
+    },
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Top Stats Grid */}
@@ -167,39 +186,29 @@ function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsig
             <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-neutral-900">Verification Queue</h3>
-                <p className="text-xs text-neutral-500">Agents awaiting AI/Manual lookup</p>
+                <p className="text-xs text-neutral-500">Entities awaiting ecosystem validation</p>
               </div>
               <button 
-                onClick={() => window.location.href = "/admin/verify"}
+                onClick={() => setLocation("/admin/verify")}
                 className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
               >
                 View All <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="divide-y divide-neutral-100">
-              <VerificationRow 
-                name="Tendai Moyo" 
-                location="Harare, ZW" 
-                confidence={92} 
-                time="12m ago" 
-                onApprove={() => {}}
-              />
-              <VerificationRow 
-                name="Kenji Sato" 
-                location="Tokyo, JP" 
-                confidence={88} 
-                time="45m ago" 
-                onApprove={() => {}}
-              />
-              <VerificationRow 
-                name="Sarah Botha" 
-                location="Cape Town, ZA" 
-                confidence={42} 
-                time="1h ago" 
-                status="needs_review"
-                onApprove={() => {}}
-              />
-            </div>
+              {metrics.pendingVerifications > 0 ? verifications?.slice(0, 3).map((v: any) => (
+                <VerificationRow 
+                  key={v.id}
+                  name={`${v.userName} ${v.userLastName || ''}`} 
+                  location={v.documentType || "ID Document"} 
+                  confidence={Math.round((v.confidence || 0.9) * 100)} 
+                  time={new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                  onApprove={() => approveMutation.mutate(v.id)}
+                />
+              )) : (
+                <div className="p-8 text-center text-neutral-400 text-xs font-bold uppercase tracking-widest">
+                  Queue Empty
+                </div>
+              )}
           </PremiumCard>
 
           {/* AI Network Oversight Panel */}
@@ -281,7 +290,7 @@ function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsig
               <PayoutItem agent="Elite Realty" amount={450.00} date="Today" />
               <PayoutItem agent="Sato Properties" amount={210.00} date="2h ago" />
               <button 
-                onClick={() => window.location.href = "/admin/payouts"}
+                onClick={() => setLocation("/admin/payouts")}
                 className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm transition-all mt-2"
               >
                 Manage Payouts
@@ -327,20 +336,38 @@ function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsig
 }
 
 function AdminUsersView() {
+  const { data: users = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: () => apiRequest("GET", "/api/admin/users"),
+  });
+
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  const filteredUsers = users.filter(u => 
+    `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-neutral-900">User Directory</h2>
           <p className="text-sm text-neutral-500">Manage stakeholder identities across the ecosystem</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="bg-white p-2.5 rounded-xl border border-neutral-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input 
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none min-w-[280px]"
+            />
+          </div>
+          <button className="bg-white p-2.5 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-colors">
             <Filter className="w-5 h-5 text-neutral-400" />
-          </button>
-          <button className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add User
           </button>
         </div>
       </div>
@@ -353,16 +380,33 @@ function AdminUsersView() {
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Stakeholder</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Role</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Engagement</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Verification</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Last Active</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              <UserRow name="Tatenda M." email="tatenda@paidrefer.com" role="Referrer" status="Active" engagement={85} active="2m ago" />
-              <UserRow name="Sarah Botha" email="sarah.b@eliterealty.com" role="Agent" status="Pending" engagement={12} active="1h ago" />
-              <UserRow name="Kenji Sato" email="kenji@tokyohomes.jp" role="Agent" status="Verified" engagement={94} active="5m ago" />
-              <UserRow name="Rudo T." email="rudo@gmail.com" role="Customer" status="Active" engagement={67} active="12m ago" />
+            <tbody className="divide-y divide-neutral-100">
+              {isLoading ? (
+                [1,2,3].map(i => <tr key={i} className="animate-pulse">
+                  <td colSpan={6} className="px-6 py-8"><div className="h-4 bg-neutral-100 rounded w-full" /></td>
+                </tr>)
+              ) : filteredUsers.length > 0 ? filteredUsers.map((user) => (
+                <UserRow 
+                  key={user.id}
+                  name={`${user.firstName} ${user.lastName}`} 
+                  email={user.email} 
+                  role={user.role} 
+                  status={user.onboardingStatus} 
+                  isVerified={user.isVerified}
+                  active={user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString() : "Never"} 
+                />
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-neutral-400 text-xs font-bold uppercase tracking-widest">
+                    No users found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -371,12 +415,12 @@ function AdminUsersView() {
   );
 }
 
-function UserRow({ name, email, role, status, engagement, active }: any) {
+function UserRow({ name, email, role, status, isVerified, active }: any) {
   return (
     <tr className="hover:bg-neutral-50 transition-colors group">
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center font-bold text-sm border border-neutral-200">
+          <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center font-bold text-sm border border-neutral-200 text-primary">
             {name[0]}
           </div>
           <div>
@@ -386,27 +430,41 @@ function UserRow({ name, email, role, status, engagement, active }: any) {
         </div>
       </td>
       <td className="px-6 py-4">
-        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-neutral-100 text-neutral-500 border border-neutral-200">
+        <span className={cn(
+          "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border",
+          role === 'admin' ? "bg-red-50 text-red-600 border-red-100" : "bg-neutral-100 text-neutral-500 border-neutral-200"
+        )}>
           {role}
         </span>
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className={`h-1.5 w-1.5 rounded-full ${status === 'Active' || status === 'Verified' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-          <span className="text-xs font-bold text-neutral-600">{status}</span>
+          <div className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'
+          )} />
+          <span className="text-xs font-bold text-neutral-600 capitalize">{status}</span>
         </div>
       </td>
       <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-1.5 w-24 bg-neutral-100 rounded-full overflow-hidden">
-            <div className="h-full bg-primary" style={{ width: `${engagement}%` }} />
+        {isVerified ? (
+          <div className="flex items-center gap-1.5 text-emerald-600">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Verified</span>
           </div>
-          <span className="text-[10px] font-bold text-neutral-400">{engagement}%</span>
-        </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-neutral-400">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Pending</span>
+          </div>
+        )}
       </td>
       <td className="px-6 py-4 text-xs text-neutral-400 font-bold">{active}</td>
       <td className="px-6 py-4 text-right">
-        <button className="text-neutral-400 hover:text-neutral-900 p-2">
+        <button 
+          onClick={() => alert(`Administrative actions for ${name} (ID: ${email})`)}
+          className="text-neutral-400 hover:text-neutral-900 p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+        >
           <MoreVertical className="w-4 h-4" />
         </button>
       </td>
@@ -420,9 +478,11 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
     queryFn: () => apiRequest("GET", "/api/admin/verifications"),
   });
 
+  const { toast } = useToast();
   const approveMutation = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/admin/verifications/${id}/approve`),
     onSuccess: () => {
+      toast({ title: "Approved", description: "Stakeholder has been verified successfully." });
       refetch();
     },
   });
@@ -444,25 +504,25 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
         <PremiumCard className="bg-white border-neutral-200 p-8 space-y-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 rounded-2xl bg-neutral-50 flex items-center justify-center border border-neutral-100 shadow-xl">
-              <BrainCircuit className="w-8 h-8 text-primary" />
+              <ShieldCheck className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-neutral-900 uppercase tracking-tight">Gemini Verification IQ</h3>
-              <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Self-Learning Engine v2.4</p>
+              <h3 className="text-lg font-black text-neutral-900 uppercase tracking-tight">Verification Authority</h3>
+              <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Ecosystem Engine v2.4</p>
             </div>
           </div>
           
-          <p className="text-sm text-neutral-300 leading-relaxed">
-            The AI engine analyzes license numbers against the Global Real Estate Registry and performs OCR on identity documents to ensure a 100% data match.
+          <p className="text-sm text-neutral-500 leading-relaxed">
+            The verification engine analyzes license data against global registries and performs validation on identity documents to ensure ecosystem integrity.
           </p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Pass Rate</p>
-              <p className="text-2xl font-black text-emerald-600">88.4%</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Queue Health</p>
+              <p className="text-2xl font-black text-emerald-600">Optimal</p>
             </div>
             <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Avg IQ Match</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Avg Confidence</p>
               <p className="text-2xl font-black text-primary">94%</p>
             </div>
           </div>
@@ -498,9 +558,11 @@ function AdminPayoutsView() {
     queryFn: () => apiRequest("GET", "/api/admin/payouts"),
   });
 
+  const { toast } = useToast();
   const settleMutation = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/admin/payouts/${id}/settle`),
     onSuccess: () => {
+      toast({ title: "Settled", description: "Commission settlement has been processed." });
       refetch();
     },
   });
@@ -648,13 +710,19 @@ function VerificationRow({ name, location, confidence, time, onApprove, status }
         </div>
         <div>
           <h4 className="font-bold text-sm text-neutral-900">{name}</h4>
-          <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-extrabold">{location}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-extrabold">{location}</p>
+            <button className="text-primary hover:underline text-[10px] font-bold flex items-center gap-0.5">
+              <FileText className="w-3 h-3" />
+              View Doc
+            </button>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-6">
         <div className="text-right">
           <p className={`text-xs font-black ${confidence > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
-            {confidence}% <span className="text-[10px] text-neutral-400 opacity-70">AI Match</span>
+            {confidence}% <span className="text-[10px] text-neutral-400 opacity-70">Data Match</span>
           </p>
           <div className="h-1 w-20 bg-neutral-100 mt-1 rounded-full overflow-hidden">
             <div className={`h-full ${confidence > 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${confidence}%` }} />
@@ -753,6 +821,59 @@ function RefreshBadge() {
   return (
     <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
       Live Syncing
+    </div>
+  );
+}
+
+function AdminRegistryView() {
+  const { data: registry = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/agent-registry"],
+    queryFn: () => apiRequest("GET", "/api/admin/agent-registry"),
+  });
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-neutral-900">Global Agent Registry</h2>
+          <p className="text-sm text-neutral-500">Discovery and indexing of third-party real estate professionals</p>
+        </div>
+        <button className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20">
+          <Globe className="w-4 h-4" />
+          Trigger Discovery
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          [1,2,3].map(i => <div key={i} className="h-48 bg-white rounded-3xl animate-pulse border border-neutral-100" />)
+        ) : registry.length > 0 ? registry.map((agent) => (
+          <PremiumCard key={agent.id} className="bg-white border-neutral-200 p-6 hover:border-primary/30">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center border border-neutral-100 text-primary font-bold">
+                {agent.name?.[0] || 'A'}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest bg-neutral-100 text-neutral-500 px-2 py-1 rounded">
+                {agent.country}
+              </span>
+            </div>
+            <h3 className="font-bold text-neutral-900 mb-1">{agent.name}</h3>
+            <p className="text-xs text-neutral-500 mb-4">{agent.agency}</p>
+            <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
+              <span className="text-[10px] font-bold text-neutral-400">Score: {agent.trustScore}%</span>
+              <button className="text-primary text-xs font-bold hover:underline">View Source</button>
+            </div>
+          </PremiumCard>
+        )) : (
+          <div className="col-span-full py-20 text-center">
+            <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-neutral-100">
+              <Globe className="w-8 h-8 text-neutral-300" />
+            </div>
+            <h3 className="text-sm font-bold text-neutral-900">Registry is empty</h3>
+            <p className="text-xs text-neutral-500 mt-1">Start by discovering agents from public portals</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

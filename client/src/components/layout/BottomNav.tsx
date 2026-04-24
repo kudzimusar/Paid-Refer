@@ -81,7 +81,7 @@ export function BottomNav() {
   const items = navMap[user.role || "customer"] ?? CUSTOMER_NAV;
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav md:hidden">
       <div className={cn(
         "flex items-center justify-between h-full max-w-lg mx-auto px-2",
         items.length === 5 ? "grid grid-cols-5" : "flex"
