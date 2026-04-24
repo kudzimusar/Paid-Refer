@@ -98,6 +98,7 @@ export function BottomNav() {
           return (
             <Link key={item.href} href={item.href}>
               <button
+                data-testid={item.label === "Academy" ? "academy-link" : undefined}
                 className={cn(
                   "bottom-nav-item w-full",
                   isActive && "active"

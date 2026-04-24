@@ -449,7 +449,7 @@ export default function AgentDashboard() {
                       </div>
                       <StatusBadge status={lead.status} />
                       <Link href="/dashboard/leads">
-                        <button className="p-2 hover:bg-gray-100 rounded-xl">
+                        <button className="p-2 hover:bg-gray-100 rounded-xl" data-testid="chat-button">
                           <MessageCircle className="w-4 h-4 text-primary" />
                         </button>
                       </Link>

@@ -527,7 +527,7 @@ export default function ReferrerDashboard() {
         </div>
 
         {/* ── Settlement Ledger ── */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-testid="payout-card">
           <SectionTitle title="Earnings Ledger" subtitle="Pending & completed settlements" />
           <div className="space-y-3">
             {settlements.length > 0 ? (
