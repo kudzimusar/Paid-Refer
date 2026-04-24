@@ -3,7 +3,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { 
   BookOpen, Sparkles, DollarSign, Users, ShieldCheck, 
   ArrowRight, Zap, Target, TrendingUp, MessageCircle, 
-  MapPin, Award, CheckCircle2, PlayCircle, Star
+  MapPin, Award, CheckCircle2, PlayCircle, Star, BrainCircuit
 } from "lucide-react";
 import { NavLogo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";

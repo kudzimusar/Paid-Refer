@@ -23,6 +23,8 @@ import { CompetitionRadar } from "@/components/features/CompetitionRadar";
 import { LeaseRenewalPipeline } from "@/components/features/LeaseRenewalPipeline";
 import { isDemoMode } from "@/lib/demoMode";
 import { getMockAgentLeads } from "@/lib/mockData";
+import { TenantScreeningCard } from "@/components/features/TenantScreeningCard";
+import { AgentCollaboration } from "@/components/features/AgentCollaboration";
 
 
 interface Lead {
@@ -75,6 +77,7 @@ function PriorityLeadCard({ lead, onAccept, onDecline, accepting }: {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="lead-card urgent"
+      data-testid="lead-card"
     >
       {/* Header row */}
       <div className="flex items-start gap-3 mb-3">
@@ -317,7 +320,11 @@ export default function AgentDashboard() {
             )}
 
             {/* ── Feature 5: Competition Radar ── */}
-            {!isLoading && <CompetitionRadar />}
+            {!isLoading && (
+              <div data-testid="competition-radar">
+                <CompetitionRadar />
+              </div>
+            )}
 
             {/* ── Stats bar ── */}
 
@@ -453,6 +460,12 @@ export default function AgentDashboard() {
             )}
             {/* ── Feature 6: Lease Renewal Pipeline ── */}
             <LeaseRenewalPipeline />
+
+            {/* ── Feature 7: AI Tenant Screening (LOST feature restored) ── */}
+            <TenantScreeningCard />
+
+            {/* ── Feature 8: Agent Collaboration ── */}
+            <AgentCollaboration />
           </div>
         </>
       )}

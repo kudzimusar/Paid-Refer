@@ -9,11 +9,9 @@ import { LeadCard } from "../components/leads/LeadCard";
 import { LeadDetailPanel } from "../components/leads/LeadDetailPanel";
 import { ChatDrawer } from "../components/chat/ChatDrawer";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Search, User, CheckCircle2 } from "lucide-react";
+import { RefreshCw, User, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useNotifications } from "../contexts/NotificationContext";
-import { DashboardSkeleton } from "../components/ui/DashboardSkeleton";
-import { Column } from "../components/leads/Column";
 
 export default function AgentLeadDashboard() {
   const {
@@ -74,8 +72,8 @@ export default function AgentLeadDashboard() {
   };
 
   const { data: settlements = [] } = useQuery<any[]>({
-    queryKey: ["/api/settlements/to-pay"],
-    queryFn: () => apiRequest("GET", "/api/settlements/to-pay"),
+    queryKey: ["/api/settlements"],
+    queryFn: () => apiRequest("GET", "/api/settlements"),
   });
 
   const markPaidMutation = useMutation({
@@ -87,7 +85,7 @@ export default function AgentLeadDashboard() {
         title: "Commission Disbursed!",
         message: "A commission payment has been successfully recorded in the network ledger.",
       });
-      qc.invalidateQueries({ queryKey: ["/api/settlements/to-pay"] });
+      qc.invalidateQueries({ queryKey: ["/api/settlements"] });
     },
     onError: () => toast({ title: "Error", description: "Failed to update settlement.", variant: "destructive" }),
   });

@@ -23,83 +23,87 @@ interface DemoStep {
 const DEMO_STEPS: DemoStep[] = [
   {
     id: 1,
-    title: "Welcome to Refer 2.0",
-    description: "The AI-powered referral platform for real estate",
-    content:
-      "Watch how referrers, customers, and agents connect through our intelligent matching system.",
-    highlightSelector: "body",
-  },
-  {
-    id: 2,
-    title: "Market Selector",
-    description: "Switch between markets seamlessly",
-    content:
-      "Support for Zimbabwe, South Africa, and Japan with localized currencies, property types, and regulations.",
-    highlightSelector: "[data-testid='market-switcher']",
-  },
-  {
-    id: 3,
-    title: "Referrer Dashboard",
-    description: "Generate smart QR codes with AI intent analysis",
-    content:
-      "Referrers generate unique codes. AI analyzes their intent and pre-matches agents before the link is even shared.",
+    title: "1. Referrer Entry",
+    description: "Start the journey as a verified referrer",
+    content: "Referrers sign up and immediately get access to their personalized intelligence hub.",
     highlightSelector: "[data-testid='referral-section']",
   },
   {
+    id: 2,
+    title: "2. AI Intent QR Codes",
+    description: "Generating dynamic tracking links",
+    content: "Our AI generates smart QR codes that track not just the click, but the context of the user's property needs.",
+    highlightSelector: "[data-testid='qr-code']",
+  },
+  {
+    id: 3,
+    title: "3. Frictionless Sharing",
+    description: "WhatsApp & Social Integration",
+    content: "One-tap sharing to WhatsApp, LINE, or Messenger to reach customers where they already are.",
+    highlightSelector: "[data-testid='share-buttons']",
+  },
+  {
     id: 4,
-    title: "Trust Score System",
-    description: "AI-calculated agent reputation",
-    content:
-      "Each agent gets a transparent trust score (0-1000) based on response time, success rate, reviews, verification, and activity.",
-    highlightSelector: "[data-testid='trust-score']",
+    title: "4. The Scan Experience",
+    description: "Customer enters the ecosystem",
+    content: "When a customer scans, they are greeted by a localized AI agent matched to their market.",
+    highlightSelector: "body",
   },
   {
     id: 5,
-    title: "Predictive Intelligence",
-    description: "AI forecasts deal closure probability",
-    content:
-      "When a customer request arrives, AI analyzes it and predicts: close probability (%), expected close time, commission range, and matching agents.",
-    highlightSelector: "[data-testid='deal-prediction']",
+    title: "5. Intelligent Intake",
+    description: "Capturing requirements with AI",
+    content: "Customers submit their needs via web or voice. AI instantly formats these into actionable lead data.",
+    highlightSelector: "[data-testid='customer-form']",
   },
   {
     id: 6,
-    title: "Proof of Introduction",
-    description: "Agents cannot bypass referrers",
-    content:
-      "Customer provides referral code at checkout. Deal closure requires customer confirmation in-app. Referrer commission is guaranteed.",
-    highlightSelector: "[data-testid='code-input']",
+    title: "6. Multi-Agent Competition",
+    description: "The Reverse Auction begins",
+    content: "Qualified agents in the area receive a 'Competition Alert'. The fastest, most relevant agents win the lead.",
+    highlightSelector: "[data-testid='competition-radar']",
   },
   {
     id: 7,
-    title: "Real-time Activity",
-    description: "Live market pulse dashboard",
-    content:
-      "See demand heatmaps by location, active requests, deal closures, and AI insights—all updating in real-time.",
-    highlightSelector: "[data-testid='market-pulse']",
+    title: "7. Agent Lead Intelligence",
+    description: "AI-Powered decision support",
+    content: "Agents see 'Lead Intelligence' cards showing closing probability and intent depth before accepting.",
+    highlightSelector: "[data-testid='lead-card']",
   },
   {
     id: 8,
-    title: "Gamification",
-    description: "Referrers earn XP and climb tiers",
-    content:
-      "Level up from Bronze → Silver → Gold → Platinum with XP, achievements, weekly leaderboards, and reward points.",
-    highlightSelector: "[data-testid='gamification']",
+    title: "8. The Unlocked Chat",
+    description: "Direct secure communication",
+    content: "Once accepted, a secure bridge opens. Proof-of-Introduction (POI) is now active and locked in the ledger.",
+    highlightSelector: "[data-testid='chat-button']",
   },
   {
     id: 9,
-    title: "Revenue Model",
-    description: "Transparent commission for all",
-    content:
-      "Referrer: $120/deal (ZW), Customer: $20 cashback, Agent: Standard commission, Platform: 5% transaction fee.",
-    highlightSelector: "body",
+    title: "9. AI Voice Assistant",
+    description: "Effortless communication",
+    content: "Both parties can use the AI Voice Assistant for instant transcription and intent mapping.",
+    highlightSelector: "[data-testid='voice-assistant']",
   },
   {
     id: 10,
-    title: "Why Refer 2.0?",
-    description: "Key competitive advantages",
-    content:
-      "✅ AI-powered matching for 40% faster closes\n✅ Proof-of-introduction prevents agent bypass\n✅ Transparent trust scores build confidence\n✅ Multi-market expansion ready\n✅ Mobile-first for emerging markets",
-    highlightSelector: "body",
+    title: "10. Automated Settlement",
+    description: "The payout loop closes",
+    content: "Upon deal confirmation, the ledger triggers a multi-party payout: Referrer, Platform, and Customer Cashback.",
+    highlightSelector: "[data-testid='payout-card']",
+  },
+  {
+    id: 11,
+    title: "11. Network Growth",
+    description: "Real-time earnings tracking",
+    content: "The Referrer's dashboard updates instantly with new XP and earnings, encouraging further network growth.",
+    highlightSelector: "[data-testid='earnings-stats']",
+  },
+  {
+    id: 12,
+    title: "12. Continuous Optimization",
+    description: "AI Academy & Scaling",
+    content: "Our AI Academy provides tips based on performance data to help users maximize their referral revenue.",
+    highlightSelector: "[data-testid='academy-link']",
   },
 ];
 

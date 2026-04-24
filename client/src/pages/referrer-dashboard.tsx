@@ -87,7 +87,10 @@ function LinkCard({ link }: { link: ReferralLink }) {
       </div>
 
       {/* URL chip */}
-      <div className="flex items-center gap-3 bg-neutral-50 rounded-2xl px-4 py-3 border border-neutral-100 group">
+      <div 
+        className="flex items-center gap-3 bg-neutral-50 rounded-2xl px-4 py-3 border border-neutral-100 group"
+        data-testid="share-buttons"
+      >
         <span className="font-mono text-xs text-neutral-600 flex-1 truncate">{url}</span>
         <div className="flex items-center gap-1">
           <button 
@@ -311,7 +314,7 @@ export default function ReferrerDashboard() {
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         {/* ── Quick Stats ── */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3" data-testid="referral-section">
           {[
             { label: "Active Links", value: activeLinks, color: "stats-tile-blue" },
             { label: "Total Clicks", value: totalClicks, color: "stats-tile-purple" },
@@ -332,8 +335,8 @@ export default function ReferrerDashboard() {
               <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em]">Chain of Custody</h3>
               <p className="text-sm font-black text-neutral-900 mt-1">Lead Conversion Funnel</p>
             </div>
-            <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-              <TrendingUp className="w-5 h-5" />
+            <div className="p-2 bg-blue-50 rounded-xl text-blue-600" data-testid="qr-code">
+              <QrCode className="w-5 h-5" />
             </div>
           </div>
 

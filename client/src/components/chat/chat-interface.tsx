@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Conversation, Message, WebSocketMessage } from "@/types";
+import { VoiceMessenger } from "@/components/chat/VoiceMessenger";
 
 const MOCK_MESSAGES: Message[] = [
   {
@@ -291,32 +292,42 @@ export function ChatInterface({ conversation }: ChatInterfaceProps) {
 
       {/* Message Input */}
       <div className="px-6 py-4 bg-white border-t border-neutral-100">
-        <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-          <button 
-            type="button"
-            className="p-2 text-neutral-500 hover:text-neutral-700"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-          <div className="flex-1 relative">
-            <Input
-              value={messageText}
-              onChange={(e) => {
-                setMessageText(e.target.value);
-                handleTyping();
-              }}
-              placeholder="Type a message..."
-              className="w-full py-3 px-4 bg-neutral-100 border-none rounded-full focus:ring-2 focus:ring-primary"
-            />
+        <div className="flex items-center space-x-3">
+          <form onSubmit={handleSendMessage} className="flex-1 flex items-center space-x-3">
+            <button 
+              type="button"
+              className="p-2 text-neutral-500 hover:text-neutral-700"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+            <div className="flex-1 relative">
+              <Input
+                value={messageText}
+                onChange={(e) => {
+                  setMessageText(e.target.value);
+                  handleTyping();
+                }}
+                placeholder="Type a message..."
+                className="w-full py-3 px-4 bg-neutral-100 border-none rounded-full focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              disabled={!messageText.trim() || sendMessageMutation.isPending}
+              className="p-3 bg-primary text-white rounded-full"
+            >
+              <Send className="w-5 h-5" />
+            </Button>
+          </form>
+          
+          {/* AI Voice Assistant (LOST feature restored) */}
+          <div data-testid="voice-assistant">
+            <VoiceMessenger onSendMessage={(text) => {
+              setMessageText(text);
+              // Optionally auto-submit or just fill the input
+            }} />
           </div>
-          <Button 
-            type="submit" 
-            disabled={!messageText.trim() || sendMessageMutation.isPending}
-            className="p-3 bg-primary text-white rounded-full"
-          >
-            <Send className="w-5 h-5" />
-          </Button>
-        </form>
+        </div>
       </div>
     </div>
   );

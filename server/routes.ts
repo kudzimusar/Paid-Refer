@@ -59,6 +59,7 @@ import { initiateMobilePayment, checkPaymentStatus, updatePaynowTransaction } fr
 import { triggerAgentScoringUpdate } from "./lib/agent-scoring.ts";
 import { createConversation } from "./lib/firestore-chat";
 import { and, eq, desc, sql, inArray, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { processTieredCommissions, processHouseOwnerCashback } from "./lib/commissions";
 import { db } from "./db.ts";
 import {
@@ -1906,8 +1907,8 @@ Empowering local agents & referrers.
         userId: agentVerifications.agentId,
         userName: users.firstName,
         userLastName: users.lastName,
-        documentType: agentVerifications.documentType,
-        confidence: agentVerifications.aiConfidence,
+        documentType: agentVerifications.documentUrl,
+        confidence: agentVerifications.aiConfidenceScore,
         status: agentVerifications.verificationStatus,
         createdAt: agentVerifications.createdAt
       })
@@ -1930,7 +1931,7 @@ Empowering local agents & referrers.
 
       // Update verification status
       await db.update(agentVerifications)
-        .set({ verificationStatus: "approved" as any, updatedAt: new Date() })
+        .set({ verificationStatus: "approved" as any, verifiedAt: new Date() })
         .where(eq(agentVerifications.id, id));
 
       // Update user verification state
@@ -1958,6 +1959,9 @@ Empowering local agents & referrers.
 
   app.get("/api/admin/payouts", requireAuth, requireRole("admin"), async (req, res) => {
     try {
+      const payers = alias(users, "payers");
+      const payees = alias(users, "payees");
+
       const payouts = await db.select({
         id: commissionSettlements.id,
         amount: commissionSettlements.amount,

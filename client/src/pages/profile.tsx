@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { isDemoMode } from "@/lib/demoMode";
+import { GamificationCenter } from "@/components/features/GamificationCenter";
 
 
 
@@ -93,16 +94,8 @@ export default function ProfilePage() {
             <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">ID: {user.id?.slice(0, 8) || "DEMO"}</span>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 mt-10 w-full">
-            {stats.map((stat) => (
-              <div key={stat.label} className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100">
-                <div className="flex justify-center mb-1">
-                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                </div>
-                <div className="text-lg font-black text-neutral-900">{stat.value}</div>
-                <div className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">{stat.label}</div>
-              </div>
-            ))}
+          <div className="mt-10 w-full" data-testid="earnings-stats">
+            <GamificationCenter xp={isReferrer ? 2450 : isAgent ? 8420 : 1250} />
           </div>
         </div>
       </div>
@@ -152,6 +145,7 @@ export default function ProfilePage() {
 
           <Link href="/academy">
             <button
+              data-testid="academy-link"
               className="w-full flex items-center gap-4 p-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] text-white shadow-lg hover:shadow-xl transition-all group overflow-hidden relative"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

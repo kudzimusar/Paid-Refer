@@ -15,6 +15,7 @@ import { SectionTitle, ChipSelector } from "@/components/ui/primitives";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { PremiumCard } from "@/components/ui/premium-card";
+import { MortgageCalculator } from "@/components/features/MortgageCalculator";
 
 // ... (PROPERTY_TYPES_BY_COUNTRY and AMENITIES remain same)
 const PROPERTY_TYPES_BY_COUNTRY: Record<string, string[]> = {
@@ -88,7 +89,7 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
         style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}
       >
         <div className="flex justify-center pt-4 pb-2 shrink-0"><div className="w-10 h-1.5 bg-gray-200 rounded-full" /></div>
-        <div className="px-5 pb-8 overflow-y-auto">
+        <div className="px-5 pb-8 overflow-y-auto" data-testid="customer-form">
           <h2 className="text-lg font-extrabold text-neutral-900 mb-1">Find My Property</h2>
           <p className="text-sm text-neutral-500 mb-5">Step {step} of 3 — {["Property Basics", "Budget & Timing", "Requirements"][step - 1]}</p>
           {step === 1 && (
@@ -327,6 +328,11 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
+            {/* ── Feature: Mortgage Calculator ── */}
+            <div data-testid="payout-card">
+              <MortgageCalculator />
+            </div>
+
             {/* Interested Agents */}
             {matchedAgents.length > 0 && (
               <div>
@@ -348,7 +354,11 @@ export default function CustomerDashboard() {
                         </div>
                       </div>
                       <div className="mt-4 flex gap-3">
-                        <button onClick={() => setLocation(`/search/chat/${lead.conversationId}`)} className="flex-1 btn-premium h-10 text-xs flex items-center justify-center gap-2">
+                        <button 
+                          data-testid="chat-button"
+                          onClick={() => setLocation(`/search/chat/${lead.conversationId}`)} 
+                          className="flex-1 btn-premium h-10 text-xs flex items-center justify-center gap-2"
+                        >
                           <MessageCircle className="w-4 h-4" /> Message Agent
                         </button>
                         <button className="h-10 px-4 border border-neutral-200 text-neutral-600 text-xs font-bold rounded-xl">📞 Schedule Call</button>

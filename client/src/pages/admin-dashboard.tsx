@@ -182,12 +182,14 @@ function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsig
                 location="Harare, ZW" 
                 confidence={92} 
                 time="12m ago" 
+                onApprove={() => {}}
               />
               <VerificationRow 
                 name="Kenji Sato" 
                 location="Tokyo, JP" 
                 confidence={88} 
                 time="45m ago" 
+                onApprove={() => {}}
               />
               <VerificationRow 
                 name="Sarah Botha" 
@@ -195,6 +197,7 @@ function AdminOverview({ metrics, aiInsights }: { metrics: AdminMetrics, aiInsig
                 confidence={42} 
                 time="1h ago" 
                 status="needs_review"
+                onApprove={() => {}}
               />
             </div>
           </PremiumCard>
@@ -490,10 +493,18 @@ function AdminVerifyView({ metrics }: { metrics: AdminMetrics }) {
 }
 
 function AdminPayoutsView() {
-  const { data: payouts = [] } = useQuery<any[]>({
+  const { data: payouts = [], refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/payouts"],
     queryFn: () => apiRequest("GET", "/api/admin/payouts"),
   });
+
+  const settleMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/payouts/${id}/settle`),
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -525,9 +536,11 @@ function AdminPayoutsView() {
                 <SettlementRow 
                   key={p.id}
                   agent={`${p.agentName} ${p.agentLastName || ''}`} 
-                  referrer="Platform Referral" 
+                  referrer={`${p.referrerName} ${p.referrerLastName || ''}`} 
                   amount={parseFloat(p.amount)} 
                   status={p.status} 
+                  onSettle={() => settleMutation.mutate(p.id)}
+                  isPending={settleMutation.isPending && settleMutation.variables === p.id}
                 />
               )) : (
                 <div className="p-12 text-center text-neutral-500 text-xs font-bold uppercase tracking-widest">
@@ -563,7 +576,7 @@ function AdminPayoutsView() {
   );
 }
 
-function SettlementRow({ agent, referrer, amount, status }: any) {
+function SettlementRow({ agent, referrer, amount, status, onSettle, isPending }: any) {
   return (
     <div className="p-6 flex items-center justify-between hover:bg-white/5 transition-colors group">
       <div className="flex items-center gap-6">
@@ -575,11 +588,20 @@ function SettlementRow({ agent, referrer, amount, status }: any) {
           <p className="text-[11px] text-neutral-500">Ref: {referrer}</p>
         </div>
       </div>
-      <div className="text-right">
-        <p className="text-lg font-black text-white">${amount.toFixed(2)}</p>
-        <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-          {status}
-        </span>
+      <div className="flex items-center gap-8">
+        <div className="text-right">
+          <p className="text-lg font-black text-white">${amount.toFixed(2)}</p>
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+            {status}
+          </span>
+        </div>
+        <button 
+          onClick={onSettle}
+          disabled={isPending}
+          className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all disabled:opacity-50"
+        >
+          {isPending ? "Settle..." : "Settle"}
+        </button>
       </div>
     </div>
   );
@@ -617,7 +639,7 @@ function StatCard({ label, value, trend, icon, alert }: { label: string; value: 
   );
 }
 
-function VerificationRow({ name, location, confidence, time, onApprove }: { name: string; location: string; confidence: number; time: string; onApprove: () => void }) {
+function VerificationRow({ name, location, confidence, time, onApprove, status }: { name: string; location: string; confidence: number; time: string; onApprove: () => void; status?: string }) {
   return (
     <div className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
       <div className="flex items-center gap-4">
