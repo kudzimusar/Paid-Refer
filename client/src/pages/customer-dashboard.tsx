@@ -82,7 +82,7 @@ function RequestForm({ onSuccess }: { onSuccess: () => void }) {
   const types = PROPERTY_TYPES_BY_COUNTRY[country] ?? PROPERTY_TYPES_BY_COUNTRY["ZW"];
 
   return (
-    <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-[2px] z-[60] flex items-end justify-center">
+    <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-md z-[100] flex items-end justify-center">
       <motion.div
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
         className="bg-white w-full max-w-lg rounded-t-[32px] overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.12)]"

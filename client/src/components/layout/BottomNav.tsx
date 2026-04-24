@@ -61,6 +61,8 @@ const gridColsMap: Record<number, string> = {
   5: "grid-cols-5",
   6: "grid-cols-6",
 };
+// Add a comment to safelist these for Tailwind
+// grid-cols-1 grid-cols-2 grid-cols-3 grid-cols-4 grid-cols-5 grid-cols-6
 
 export function BottomNav() {
   const { user } = useAuthContext();
@@ -80,7 +82,10 @@ export function BottomNav() {
 
   return (
     <nav className="bottom-nav">
-      <div className={cn("grid h-full max-w-lg mx-auto", gridColsMap[items.length] || "grid-cols-4")}>
+      <div className={cn(
+        "flex items-center justify-between h-full max-w-lg mx-auto px-2",
+        items.length === 5 ? "grid grid-cols-5" : "flex"
+      )}>
         {items.map((item) => {
           // Strict matching for hubs to prevent double-highlights
           const isTopLevelHub = ["/refer", "/dashboard", "/search", "/profile", "/house-owner", "/admin"].includes(item.href);
@@ -98,7 +103,10 @@ export function BottomNav() {
                   isActive && "active"
                 )}
               >
-                <div className={cn(isActive && "nav-icon-bg")}>
+                <div className={cn(
+                  "p-2 rounded-2xl transition-all duration-300",
+                  isActive ? "bg-primary/15 scale-110" : "bg-transparent"
+                )}>
                   <Icon
                     className={cn(
                       "w-5 h-5",

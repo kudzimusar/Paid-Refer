@@ -1,0 +1,14 @@
+<USER_REQUEST>
+Answer these questions comprehensively without summarizing. Do not assume, give the line, the file, the change made and its impact and goal for the user and the system as a whole. 
+
+The correct and faithful sharing of this will help find gaps, errors and solutions to possible bottlnecks. Be thorough:
+
+COMPREHENSIVE OFFLINE CHANGES AUDIT - Full Sync Required
+
+Context: User made significant offline changes to the Refer 2.0 project. 
+Need complete understanding of current state to continue development without 
+conflicts or duplicating work.
+
+═══════════════════════════════════════════════════════════════════════════
+SECTION 1: PROJECT STRUCTURE & FILES
+<truncated 13659 bytes>
