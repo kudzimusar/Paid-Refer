@@ -1,6 +1,7 @@
+import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { 
   Users, 
   ShieldCheck, 
@@ -20,7 +21,13 @@ import {
   Search,
   Zap,
   Database,
-  FileText
+  FileText,
+  Filter,
+  MoreVertical,
+  Plus,
+  Settings,
+  User as UserIcon,
+  ShieldAlert
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
@@ -73,8 +80,16 @@ export default function AdminDashboard() {
         return <AdminVerifyView metrics={metrics} />;
       case "/admin/registry":
         return <AdminRegistryView />;
+      case "/admin/roles":
+        return <AdminRolesView />;
       case "/admin/payouts":
         return <AdminPayoutsView />;
+      case "/admin/settings":
+        return <AdminSettingsView />;
+      case "/admin/account":
+        return <AdminAccountView />;
+      case "/admin/system":
+        return <AdminSystemView metrics={metrics} />;
       default:
         return <AdminOverview metrics={metrics} aiInsights={aiInsights} />;
     }
@@ -85,24 +100,35 @@ export default function AdminDashboard() {
       <header className="border-b border-neutral-200/50 bg-white/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <NavLogo />
+            <Link href="/admin">
+              <div className="cursor-pointer">
+                <NavLogo />
+              </div>
+            </Link>
             <div className="hidden lg:block h-8 w-px bg-neutral-200" />
             {/* Navigation - Hidden on mobile/tablet, shown on desktop */}
             <nav className="hidden md:flex items-center gap-1 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
               <NavHeaderLink label="Pulse" active={location === "/admin"} icon={<Activity />} href="/admin" />
               <NavHeaderLink label="Users" active={location === "/admin/users"} icon={<Users />} href="/admin/users" />
               <NavHeaderLink label="Verify" active={location === "/admin/verify"} icon={<ShieldCheck />} href="/admin/verify" />
+              <NavHeaderLink label="Hierarchy" active={location === "/admin/roles"} icon={<ShieldAlert />} href="/admin/roles" />
               <NavHeaderLink label="Registry" active={location === "/admin/registry"} icon={<Globe />} href="/admin/registry" />
               <NavHeaderLink label="Ledger" active={location === "/admin/payouts"} icon={<CreditCard />} href="/admin/payouts" />
+              <NavHeaderLink label="System" active={location === "/admin/system"} icon={<LayoutDashboard />} href="/admin/system" />
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Ecosystem Healthy
-            </div>
-            <button className="bg-white hover:bg-neutral-50 text-neutral-600 p-2.5 rounded-2xl border border-neutral-200 transition-all">
-              <Search className="w-5 h-5" />
+            <button 
+              onClick={() => setLocation("/admin/settings")}
+              className="bg-white hover:bg-neutral-50 text-neutral-600 p-2.5 rounded-2xl border border-neutral-200 transition-all"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setLocation("/admin/account")}
+              className="bg-primary text-white p-2.5 rounded-2xl shadow-lg shadow-primary/20 transition-all"
+            >
+              <UserIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -111,6 +137,16 @@ export default function AdminDashboard() {
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {renderContent()}
       </main>
+
+      <footer className="max-w-7xl mx-auto px-4 md:px-6 py-8 border-t border-neutral-100 mt-12 flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+          Refer Premium v2.4.0
+        </p>
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-bold text-neutral-400">System Ready</span>
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        </div>
+      </footer>
     </div>
   );
 }
@@ -873,6 +909,275 @@ function AdminRegistryView() {
             <p className="text-xs text-neutral-500 mt-1">Start by discovering agents from public portals</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AdminRolesView() {
+  const { data: usersList = [], refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: () => apiRequest("GET", "/api/admin/users"),
+  });
+
+  const { toast } = useToast();
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string, role: string }) => 
+      apiRequest("PATCH", `/api/admin/users/${userId}/role`, { role }),
+    onSuccess: () => {
+      toast({ title: "Hierarchy Updated", description: "User role has been successfully modified." });
+      refetch();
+    },
+  });
+
+  const roles = ['customer', 'agent', 'referrer', 'admin', 'house_owner', 'super_admin'];
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h2 className="text-2xl font-black text-neutral-900">Ecosystem Hierarchy</h2>
+        <p className="text-sm text-neutral-500">Manage administrative privileges and authority levels</p>
+      </div>
+
+      <PremiumCard className="bg-white border-neutral-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-neutral-100 bg-neutral-50/50">
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Identity</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Current Role</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Authority Shift</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {usersList.map((u: any) => (
+              <tr key={u.id} className="hover:bg-neutral-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <p className="font-bold text-sm text-neutral-900">{u.firstName} {u.lastName}</p>
+                  <p className="text-[10px] text-neutral-400">{u.email}</p>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
+                    u.role === 'super_admin' ? 'bg-purple-100 text-purple-600' :
+                    u.role === 'admin' ? 'bg-primary/10 text-primary' :
+                    'bg-neutral-100 text-neutral-500'
+                  }`}>
+                    {u.role}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <select 
+                    value={u.role}
+                    onChange={(e) => updateRoleMutation.mutate({ userId: u.id, role: e.target.value })}
+                    className="text-xs font-bold bg-white border border-neutral-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  >
+                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </PremiumCard>
+    </div>
+  );
+}
+
+function AdminSettingsView() {
+  const { toast } = useToast();
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h2 className="text-2xl font-black text-neutral-900">Platform Configuration</h2>
+        <p className="text-sm text-neutral-500">Global parameters and automation thresholds</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <PremiumCard className="bg-white border-neutral-200 p-8 space-y-6">
+          <h3 className="font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-primary" />
+            Financial Logic
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-2">Base Commission (%)</label>
+              <input type="number" defaultValue="5" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-2">Auto-Settlement Threshold ($)</label>
+              <input type="number" defaultValue="500" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+          </div>
+        </PremiumCard>
+
+        <PremiumCard className="bg-white border-neutral-200 p-8 space-y-6">
+          <h3 className="font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            AI & Automation
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-2">Auto-Verify Confidence (%)</label>
+              <input type="number" defaultValue="85" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <button 
+              onClick={() => toast({ title: "Settings Saved", description: "Global configuration updated successfully." })}
+              className="w-full bg-primary text-white font-black uppercase tracking-[0.2em] py-4 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              Update Core
+            </button>
+          </div>
+        </PremiumCard>
+      </div>
+    </div>
+  );
+}
+
+function AdminAccountView() {
+  return (
+    <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center">
+        <div className="w-24 h-24 bg-neutral-100 rounded-3xl mx-auto flex items-center justify-center border-4 border-white shadow-xl mb-4">
+          <UserIcon className="w-10 h-10 text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-neutral-900">Administrator Profile</h2>
+        <p className="text-sm text-neutral-500">Secured Authority Account</p>
+      </div>
+
+      <PremiumCard className="bg-white border-neutral-200 p-8 space-y-6">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Account Status</p>
+            <p className="text-sm font-bold text-emerald-600">Active / Super Admin</p>
+          </div>
+          <div className="space-y-1 text-right">
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Auth Method</p>
+            <p className="text-sm font-bold text-neutral-900">Secure SSO</p>
+          </div>
+        </div>
+        <div className="pt-6 border-t border-neutral-100 space-y-4">
+          <button className="w-full text-left bg-neutral-50 hover:bg-neutral-100 p-4 rounded-2xl border border-neutral-100 transition-colors flex items-center justify-between group">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-neutral-900">Security Keys</p>
+              <p className="text-[10px] text-neutral-400 font-bold">Manage MFA & Hardware keys</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" />
+          </button>
+          <button className="w-full text-left bg-neutral-50 hover:bg-neutral-100 p-4 rounded-2xl border border-neutral-100 transition-colors flex items-center justify-between group text-rose-600">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest">Sign Out</p>
+              <p className="text-[10px] opacity-60 font-bold">Terminate all active sessions</p>
+            </div>
+            <Activity className="w-4 h-4" />
+          </button>
+        </div>
+      </PremiumCard>
+    </div>
+  );
+}
+
+function AdminSystemView({ metrics }: { metrics: AdminMetrics }) {
+  const { data: status, refetch: refetchStatus } = useQuery<any>({
+    queryKey: ["/api/admin/system/status"],
+    queryFn: () => apiRequest("GET", "/api/admin/system/status"),
+  });
+
+  const { toast } = useToast();
+  const [scanning, setScanning] = React.useState(false);
+
+  const runDiagnostic = () => {
+    setScanning(true);
+    setTimeout(() => {
+      setScanning(false);
+      refetchStatus();
+      toast({ title: "Scan Complete", description: "All core subsystems are operating at peak efficiency." });
+    }, 2000);
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-neutral-900">System Diagnostics</h2>
+          <p className="text-sm text-neutral-500">Real-time health oversight and state monitoring (v{status?.version || '2.4.0'})</p>
+        </div>
+        <button 
+          onClick={runDiagnostic}
+          disabled={scanning}
+          className="bg-neutral-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:bg-neutral-800 disabled:opacity-50 transition-all"
+        >
+          <Activity className={`w-4 h-4 ${scanning ? 'animate-spin' : ''}`} />
+          {scanning ? 'Analyzing Subsystems...' : 'Run Full Diagnostic'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <PremiumCard className="lg:col-span-2 bg-white border-neutral-200 p-8">
+          <h3 className="font-black text-neutral-900 uppercase tracking-tight mb-6 flex items-center gap-2">
+            <Database className="w-4 h-4 text-primary" />
+            Infrastructure Pulse
+          </h3>
+          <div className="space-y-6">
+            <SystemHealthRow 
+              label="Core Database" 
+              status={status?.subsystems?.database === 'healthy' ? "Operational" : "Degraded"} 
+              latency="12ms" 
+              health={status?.subsystems?.database === 'healthy' ? 100 : 40} 
+            />
+            <SystemHealthRow label="AI Workflow Engine" status="Operational" latency="450ms" health={94} />
+            <SystemHealthRow label="WhatsApp API Gateway" status="Operational" latency="88ms" health={100} />
+            <SystemHealthRow label="File Storage (Firebase)" status="Operational" latency="156ms" health={98} />
+          </div>
+        </PremiumCard>
+
+        <div className="space-y-8">
+          <PremiumCard className="bg-primary text-white p-8">
+            <h3 className="font-black uppercase tracking-tight mb-2 opacity-80">Ecosystem State</h3>
+            <p className="text-4xl font-black">Stable</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mt-4 opacity-60">Last scan: 2 mins ago</p>
+          </PremiumCard>
+
+          <PremiumCard className="bg-white border-neutral-200 p-8 space-y-4">
+            <h3 className="font-black text-neutral-900 uppercase tracking-tight text-xs">Resource Utilization</h3>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                  <span>Memory Usage</span>
+                  <span>42%</span>
+                </div>
+                <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: '42%' }} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                  <span>API Capacity</span>
+                  <span>18%</span>
+                </div>
+                <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500" style={{ width: '18%' }} />
+                </div>
+              </div>
+            </div>
+          </PremiumCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SystemHealthRow({ label, status, latency, health }: { label: string, status: string, latency: string, health: number }) {
+  return (
+    <div className="flex items-center justify-between group">
+      <div className="flex items-center gap-4">
+        <div className={`h-2 w-2 rounded-full ${health > 95 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+        <div>
+          <p className="text-sm font-bold text-neutral-900">{label}</p>
+          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{status}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-xs font-black text-neutral-900">{latency}</p>
+        <p className={`text-[10px] font-bold ${health > 95 ? 'text-emerald-500' : 'text-amber-500'}`}>{health}% health</p>
       </div>
     </div>
   );

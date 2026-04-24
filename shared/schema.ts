@@ -26,7 +26,7 @@ export const sessions = pgTable(
 );
 
 // Enums
-export const userRoleEnum = pgEnum('user_role', ['customer', 'agent', 'referrer', 'admin', 'house_owner']);
+export const userRoleEnum = pgEnum('user_role', ['customer', 'agent', 'referrer', 'admin', 'house_owner', 'super_admin']);
 export const requestStatusEnum = pgEnum('request_status', ['active', 'matched', 'completed', 'cancelled']);
 export const propertyTypeEnum = pgEnum('property_type', [
   // Japan
@@ -98,6 +98,7 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default('inactive'),
   subscriptionRenewsAt: timestamp("subscription_renews_at"),
+  lastActiveAt: timestamp("last_active_at"),
   firebaseUid: varchar("firebase_uid", { length: 128 }).unique(),
   referredByUserId: varchar("referred_by_user_id"), // Track the pyramid chain
   createdAt: timestamp("created_at").defaultNow(),
