@@ -125,6 +125,7 @@ function ProtectedRoute({ path, roles, component: Component }: {
     customer: "/search",
     referrer: "/refer",
     admin: "/admin",
+    super_admin: "/admin",
     house_owner: "/house-owner",
   };
 
@@ -171,21 +172,16 @@ function AppContent() {
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
             
             {/* ── Admin ── */}
-            <ProtectedRoute path="/admin" roles={["admin"]} component={AdminDashboard} />
-            <ProtectedRoute path="/admin/users" roles={["admin"]} component={AdminDashboard} />
-            <ProtectedRoute path="/admin/verify" roles={["admin"]} component={AdminDashboard} />
-            <ProtectedRoute path="/admin/payouts" roles={["admin"]} component={AdminDashboard} />
-            <ProtectedRoute path="/admin/registry" roles={["admin"]} component={AdminAgentRegistryPage} />
-            <ProtectedRoute path="/admin/registry" roles={["admin"]} component={AdminAgentRegistryPage} />
+            <ProtectedRoute path="/admin/:subpage*" roles={["admin", "super_admin"]} component={AdminDashboard} />
 
 
             {/* ── Customer ── */}
             <ProtectedRoute path="/search" roles={["customer"]} component={CustomerDashboard} />
             <ProtectedRoute path="/search/chat/:id" roles={["customer", "agent"]} component={ChatPage} />
             <ProtectedRoute path="/chat" roles={["customer", "agent"]} component={ChatPage} />
-            <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer", "admin", "house_owner"]} component={NotificationsPage} />
-            <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer", "admin", "house_owner"]} component={AcademyPage} />
-            <ProtectedRoute path="/profile" roles={["customer", "referrer", "agent", "admin", "house_owner"]} component={ProfilePage} />
+            <ProtectedRoute path="/notifications" roles={["customer", "agent", "referrer", "admin", "super_admin", "house_owner"]} component={NotificationsPage} />
+            <ProtectedRoute path="/academy" roles={["customer", "agent", "referrer", "admin", "super_admin", "house_owner"]} component={AcademyPage} />
+            <ProtectedRoute path="/profile" roles={["customer", "referrer", "agent", "admin", "super_admin", "house_owner"]} component={ProfilePage} />
 
             {/* ── Referrer ── */}
             <ProtectedRoute path="/refer" roles={["referrer"]} component={ReferrerDashboard} />
