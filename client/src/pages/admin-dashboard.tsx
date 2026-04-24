@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useRoute } from "wouter";
 import { 
   Users, 
   ShieldCheck, 
@@ -72,27 +72,27 @@ export default function AdminDashboard() {
     );
   }
 
+  // Sub-route matching (base-agnostic via wouter)
+  const [isUsers] = useRoute("/admin/users");
+  const [isVerify] = useRoute("/admin/verify");
+  const [isRegistry] = useRoute("/admin/registry");
+  const [isRoles] = useRoute("/admin/roles");
+  const [isPayouts] = useRoute("/admin/payouts");
+  const [isSettings] = useRoute("/admin/settings");
+  const [isAccount] = useRoute("/admin/account");
+  const [isSystem] = useRoute("/admin/system");
+  const [isOverview] = useRoute("/admin");
+
   const renderContent = () => {
-    switch (location) {
-      case "/admin/users":
-        return <AdminUsersView />;
-      case "/admin/verify":
-        return <AdminVerifyView metrics={metrics} />;
-      case "/admin/registry":
-        return <AdminRegistryView />;
-      case "/admin/roles":
-        return <AdminRolesView />;
-      case "/admin/payouts":
-        return <AdminPayoutsView />;
-      case "/admin/settings":
-        return <AdminSettingsView />;
-      case "/admin/account":
-        return <AdminAccountView />;
-      case "/admin/system":
-        return <AdminSystemView metrics={metrics} />;
-      default:
-        return <AdminOverview metrics={metrics} aiInsights={aiInsights} />;
-    }
+    if (isUsers) return <AdminUsersView />;
+    if (isVerify) return <AdminVerifyView metrics={metrics} />;
+    if (isRegistry) return <AdminRegistryView />;
+    if (isRoles) return <AdminRolesView />;
+    if (isPayouts) return <AdminPayoutsView />;
+    if (isSettings) return <AdminSettingsView />;
+    if (isAccount) return <AdminAccountView />;
+    if (isSystem) return <AdminSystemView metrics={metrics} />;
+    return <AdminOverview metrics={metrics} aiInsights={aiInsights} />;
   };
 
   return (
@@ -108,13 +108,13 @@ export default function AdminDashboard() {
             <div className="hidden lg:block h-8 w-px bg-neutral-200" />
             {/* Navigation - Hidden on mobile/tablet, shown on desktop */}
             <nav className="hidden md:flex items-center gap-1 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-              <NavHeaderLink label="Pulse" active={location === "/admin"} icon={<Activity />} href="/admin" />
-              <NavHeaderLink label="Users" active={location === "/admin/users"} icon={<Users />} href="/admin/users" />
-              <NavHeaderLink label="Verify" active={location === "/admin/verify"} icon={<ShieldCheck />} href="/admin/verify" />
-              <NavHeaderLink label="Hierarchy" active={location === "/admin/roles"} icon={<ShieldAlert />} href="/admin/roles" />
-              <NavHeaderLink label="Registry" active={location === "/admin/registry"} icon={<Globe />} href="/admin/registry" />
-              <NavHeaderLink label="Ledger" active={location === "/admin/payouts"} icon={<CreditCard />} href="/admin/payouts" />
-              <NavHeaderLink label="System" active={location === "/admin/system"} icon={<LayoutDashboard />} href="/admin/system" />
+              <NavHeaderLink label="Pulse" active={!!isOverview && !isUsers && !isVerify && !isRegistry && !isRoles && !isPayouts && !isSystem} icon={<Activity />} href="/admin" />
+              <NavHeaderLink label="Users" active={!!isUsers} icon={<Users />} href="/admin/users" />
+              <NavHeaderLink label="Verify" active={!!isVerify} icon={<ShieldCheck />} href="/admin/verify" />
+              <NavHeaderLink label="Hierarchy" active={!!isRoles} icon={<ShieldAlert />} href="/admin/roles" />
+              <NavHeaderLink label="Registry" active={!!isRegistry} icon={<Globe />} href="/admin/registry" />
+              <NavHeaderLink label="Ledger" active={!!isPayouts} icon={<CreditCard />} href="/admin/payouts" />
+              <NavHeaderLink label="System" active={!!isSystem} icon={<LayoutDashboard />} href="/admin/system" />
             </nav>
           </div>
           <div className="flex items-center gap-3">
