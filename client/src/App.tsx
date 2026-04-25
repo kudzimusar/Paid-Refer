@@ -17,6 +17,22 @@ import { isDemoMode } from "@/lib/demoMode";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useState, useEffect } from "react";
+// ── Hash Routing for GitHub Pages ──────────────────────────
+const hashLocation = () => {
+  const [loc, setLoc] = useState(window.location.hash.replace(/^#/, "") || "/");
+
+  useEffect(() => {
+    const handler = () => setLoc(window.location.hash.replace(/^#/, "") || "/");
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  const navigate = (to: string) => {
+    window.location.hash = to;
+  };
+
+  return [loc, navigate] as [string, (to: string) => void];
+};
 
 // ── Pages ──────────────────────────────────────────────────
 import SplashPage from "@/pages/splash";
@@ -211,7 +227,7 @@ function App() {
             <DemoModeProvider>
               <AIEventBusProvider>
                 <ProofOfIntroductionProvider>
-                  <WouterRouter base={base}>
+                  <WouterRouter hook={hashLocation}>
                     <TooltipProvider>
                       <Toaster />
                       <AppContent />
