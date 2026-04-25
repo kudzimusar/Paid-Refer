@@ -170,7 +170,7 @@ function AppContent() {
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
             
             {/* ── Admin ── */}
-            <ProtectedRoute path="/admin/:subpage*" roles={["admin", "super_admin"]} component={AdminDashboard} />
+            <ProtectedRoute path="/admin*" roles={["admin", "super_admin"]} component={AdminDashboard} />
 
 
             {/* ── Customer ── */}

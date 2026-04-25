@@ -73,15 +73,15 @@ export default function AdminDashboard() {
   }
 
   // Sub-route matching (base-agnostic via wouter)
-  const [isUsers] = useRoute("/admin/users");
-  const [isVerify] = useRoute("/admin/verify");
-  const [isRegistry] = useRoute("/admin/registry");
-  const [isRoles] = useRoute("/admin/roles");
-  const [isPayouts] = useRoute("/admin/payouts");
-  const [isSettings] = useRoute("/admin/settings");
-  const [isAccount] = useRoute("/admin/account");
-  const [isSystem] = useRoute("/admin/system");
-  const [isOverview] = useRoute("/admin");
+  const [isUsers] = useRoute("/admin/users*");
+  const [isVerify] = useRoute("/admin/verify*");
+  const [isRegistry] = useRoute("/admin/registry*");
+  const [isRoles] = useRoute("/admin/roles*");
+  const [isPayouts] = useRoute("/admin/payouts*");
+  const [isSettings] = useRoute("/admin/settings*");
+  const [isAccount] = useRoute("/admin/account*");
+  const [isSystem] = useRoute("/admin/system*");
+  const [isOverview] = useRoute("/admin*");
 
   const renderContent = () => {
     if (isUsers) return <AdminUsersView />;
