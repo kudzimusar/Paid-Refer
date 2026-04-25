@@ -12,7 +12,7 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import { RoleSwitcher } from "@/components/demo/RoleSwitcher";
 import { AIActivityIndicator } from "@/components/demo/AIActivityIndicator";
 import { GuidedTourController } from "@/components/demo/GuidedTourController";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { isDemoMode } from "@/lib/demoMode";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
