@@ -171,13 +171,7 @@ function AppContent() {
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
             
             {/* ── Admin ── */}
-            <Route path="/admin*">
-              {({ ...props }) => (
-                <AdminNavProvider>
-                  <ProtectedRoute path="/admin*" roles={["admin", "super_admin"]} component={AdminDashboard} />
-                </AdminNavProvider>
-              )}
-            </Route>
+            <ProtectedRoute path="/admin*" roles={["admin", "super_admin"]} component={AdminDashboard} />
 
 
             {/* ── Customer ── */}
@@ -219,7 +213,9 @@ function App() {
                   <WouterRouter base={base}>
                     <TooltipProvider>
                       <Toaster />
-                      <AppContent />
+                      <AdminNavProvider>
+                        <AppContent />
+                      </AdminNavProvider>
                     </TooltipProvider>
                   </WouterRouter>
                 </ProofOfIntroductionProvider>
