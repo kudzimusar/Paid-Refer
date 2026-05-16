@@ -1,10 +1,8 @@
-const CACHE_NAME = "refer-v1";
+const CACHE_NAME = "refer-v2";
+const BASE = self.location.pathname.replace(/\/sw\.js$/, ""); // e.g. "/Paid-Refer"
 const OFFLINE_URLS = [
-  "/",
-  "/login",
-  "/register",
-  "/dashboard",
-  "/offline.html",
+  BASE + "/",
+  BASE + "/offline.html",
 ];
 
 // Pre-cache critical routes on install
@@ -18,6 +16,8 @@ self.addEventListener("install", (event) => {
 // Network first, fall back to cache
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) return;
 
   event.respondWith(
     fetch(event.request)
@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(() =>
         caches.match(event.request).then(
-          (cached) => cached || caches.match("/offline.html")
+          (cached) => cached || caches.match(BASE + "/offline.html")
         )
       )
   );

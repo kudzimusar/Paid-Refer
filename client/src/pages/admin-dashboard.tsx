@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation, Link, useRoute } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { 
   Users, 
   ShieldCheck, 
@@ -14,6 +14,7 @@ import {
   CheckCircle2, 
   Clock, 
   ChevronRight,
+  ChevronLeft,
   LayoutDashboard,
   BrainCircuit,
   Globe,
@@ -24,16 +25,18 @@ import {
   FileText,
   Filter,
   MoreVertical,
-  Plus,
   Settings,
   User as UserIcon,
-  ShieldAlert
+  ShieldAlert,
+  LogOut,
+  Home
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { NavLogo } from "@/components/ui/Logo";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface AdminMetrics {
   activeUsersNow: number;
@@ -50,13 +53,25 @@ interface AdminMetrics {
   };
 }
 
+// Ordered nav pages for prev/next arrows
+const NAV_PAGES = [
+  { href: "/admin",          label: "Pulse",     icon: <Activity className="w-3.5 h-3.5" /> },
+  { href: "/admin/users",    label: "Users",     icon: <Users className="w-3.5 h-3.5" /> },
+  { href: "/admin/verify",   label: "Verify",    icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+  { href: "/admin/roles",    label: "Hierarchy", icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+  { href: "/admin/registry", label: "Registry",  icon: <Globe className="w-3.5 h-3.5" /> },
+  { href: "/admin/payouts",  label: "Ledger",    icon: <CreditCard className="w-3.5 h-3.5" /> },
+  { href: "/admin/system",   label: "System",    icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+];
+
 export default function AdminDashboard() {
   const [location, setLocation] = useLocation();
+  const { logout } = useAuthContext();
   const { toast } = useToast();
   const { data: metrics, isLoading } = useQuery<AdminMetrics>({
     queryKey: ["/api/admin/metrics"],
     queryFn: () => apiRequest("GET", "/api/admin/metrics"),
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: 30000,
   });
 
   const { data: aiInsights } = useQuery<any>({
@@ -84,7 +99,15 @@ export default function AdminDashboard() {
   const [isSettings] = useRoute("/admin/settings*");
   const [isAccount] = useRoute("/admin/account*");
   const [isSystem] = useRoute("/admin/system*");
-  const [isOverview] = useRoute("/admin*");
+  const [isOverview] = useRoute("/admin");
+
+  // Determine current nav index for prev/next
+  const currentNavIdx = NAV_PAGES.findIndex(p =>
+    location === p.href || (p.href !== "/admin" && location.startsWith(p.href))
+  );
+  const prevPage = currentNavIdx > 0 ? NAV_PAGES[currentNavIdx - 1] : null;
+  const nextPage = currentNavIdx < NAV_PAGES.length - 1 ? NAV_PAGES[currentNavIdx + 1] : null;
+  const currentPage = NAV_PAGES[currentNavIdx] ?? NAV_PAGES[0];
 
   const renderContent = () => {
     if (isUsers) return <AdminUsersView />;
@@ -93,7 +116,7 @@ export default function AdminDashboard() {
     if (isRoles) return <AdminRolesView />;
     if (isPayouts) return <AdminPayoutsView />;
     if (isSettings) return <AdminSettingsView />;
-    if (isAccount) return <AdminAccountView />;
+    if (isAccount) return <AdminAccountView onLogout={logout} />;
     if (isSystem) return <AdminSystemView metrics={safeMetrics} />;
     return <AdminOverview metrics={safeMetrics} aiInsights={aiInsights} />;
   };
@@ -103,35 +126,93 @@ export default function AdminDashboard() {
       <header className="border-b border-neutral-200/50 bg-white/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/admin">
-              <div className="cursor-pointer">
-                <NavLogo />
-              </div>
-            </Link>
+            {/* Logo — always navigates home via SPA */}
+            <button
+              onClick={() => setLocation("/admin")}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              aria-label="Go to Admin Home"
+            >
+              <NavLogo />
+            </button>
             <div className="hidden lg:block h-8 w-px bg-neutral-200" />
-            {/* Navigation - Hidden on mobile/tablet, shown on desktop */}
+            {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-              <NavHeaderLink label="Pulse" active={!!isOverview && !isUsers && !isVerify && !isRegistry && !isRoles && !isPayouts && !isSystem} icon={<Activity />} href="/admin" />
-              <NavHeaderLink label="Users" active={!!isUsers} icon={<Users />} href="/admin/users" />
-              <NavHeaderLink label="Verify" active={!!isVerify} icon={<ShieldCheck />} href="/admin/verify" />
-              <NavHeaderLink label="Hierarchy" active={!!isRoles} icon={<ShieldAlert />} href="/admin/roles" />
-              <NavHeaderLink label="Registry" active={!!isRegistry} icon={<Globe />} href="/admin/registry" />
-              <NavHeaderLink label="Ledger" active={!!isPayouts} icon={<CreditCard />} href="/admin/payouts" />
-              <NavHeaderLink label="System" active={!!isSystem} icon={<LayoutDashboard />} href="/admin/system" />
+              <NavHeaderLink label="Pulse"     active={!!isOverview && !isUsers && !isVerify && !isRegistry && !isRoles && !isPayouts && !isSystem} icon={<Activity />}      href="/admin" />
+              <NavHeaderLink label="Users"     active={!!isUsers}    icon={<Users />}          href="/admin/users" />
+              <NavHeaderLink label="Verify"    active={!!isVerify}   icon={<ShieldCheck />}    href="/admin/verify" />
+              <NavHeaderLink label="Hierarchy" active={!!isRoles}    icon={<ShieldAlert />}    href="/admin/roles" />
+              <NavHeaderLink label="Registry"  active={!!isRegistry} icon={<Globe />}          href="/admin/registry" />
+              <NavHeaderLink label="Ledger"    active={!!isPayouts}  icon={<CreditCard />}     href="/admin/payouts" />
+              <NavHeaderLink label="System"    active={!!isSystem}   icon={<LayoutDashboard />} href="/admin/system" />
             </nav>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setLocation("/admin/settings")}
-              className="bg-white hover:bg-neutral-50 text-neutral-600 p-2.5 rounded-2xl border border-neutral-200 transition-all"
+              className={cn(
+                "bg-white hover:bg-neutral-50 text-neutral-600 p-2.5 rounded-2xl border transition-all",
+                isSettings ? "border-primary ring-2 ring-primary/20" : "border-neutral-200"
+              )}
+              title="Platform Settings"
             >
               <Settings className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setLocation("/admin/account")}
-              className="bg-primary text-white p-2.5 rounded-2xl shadow-lg shadow-primary/20 transition-all"
+              className={cn(
+                "p-2.5 rounded-2xl shadow-lg transition-all",
+                isAccount ? "bg-primary/80 text-white" : "bg-primary text-white shadow-primary/20"
+              )}
+              title="My Account"
             >
               <UserIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Page breadcrumb + prev/next nav arrows */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-10 flex items-center justify-between border-t border-neutral-100">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-400">
+            <button onClick={() => setLocation("/admin")} className="hover:text-primary transition-colors flex items-center gap-1">
+              <Home className="w-3 h-3" /> Admin
+            </button>
+            {currentNavIdx > 0 && (
+              <>
+                <ChevronRight className="w-3 h-3" />
+                <span className="text-neutral-700 flex items-center gap-1">
+                  {currentPage.icon} {currentPage.label}
+                </span>
+              </>
+            )}
+          </div>
+          {/* Prev / Next arrows */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => prevPage && setLocation(prevPage.href)}
+              disabled={!prevPage}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all border",
+                prevPage
+                  ? "bg-white hover:bg-neutral-50 text-neutral-600 border-neutral-200 hover:border-primary/30"
+                  : "opacity-30 cursor-not-allowed bg-neutral-50 text-neutral-400 border-neutral-100"
+              )}
+            >
+              <ChevronLeft className="w-3 h-3" />
+              {prevPage?.label ?? ""}
+            </button>
+            <button
+              onClick={() => nextPage && setLocation(nextPage.href)}
+              disabled={!nextPage}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all border",
+                nextPage
+                  ? "bg-white hover:bg-neutral-50 text-neutral-600 border-neutral-200 hover:border-primary/30"
+                  : "opacity-30 cursor-not-allowed bg-neutral-50 text-neutral-400 border-neutral-100"
+              )}
+            >
+              {nextPage?.label ?? ""}
+              <ChevronRight className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -143,7 +224,7 @@ export default function AdminDashboard() {
 
       <footer className="max-w-7xl mx-auto px-4 md:px-6 py-8 border-t border-neutral-100 mt-12 flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-          Refer Premium v2.4.0
+          Refer Premium v2.4.1
         </p>
         <div className="flex items-center gap-4">
           <span className="text-[10px] font-bold text-neutral-400">System Ready</span>
@@ -1035,42 +1116,48 @@ function AdminSettingsView() {
   );
 }
 
-function AdminAccountView() {
+function AdminAccountView({ onLogout }: { onLogout: () => void }) {
+  const { user } = useAuthContext();
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center">
-        <div className="w-24 h-24 bg-neutral-100 rounded-3xl mx-auto flex items-center justify-center border-4 border-white shadow-xl mb-4">
-          <UserIcon className="w-10 h-10 text-primary" />
+        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl mx-auto flex items-center justify-center border-4 border-white shadow-xl mb-4">
+          <span className="text-3xl font-black text-primary">
+            {user?.name?.[0]?.toUpperCase() ?? "A"}
+          </span>
         </div>
-        <h2 className="text-2xl font-black text-neutral-900">Administrator Profile</h2>
-        <p className="text-sm text-neutral-500">Secured Authority Account</p>
+        <h2 className="text-2xl font-black text-neutral-900">{user?.name ?? "Administrator"}</h2>
+        <p className="text-sm text-neutral-500">{user?.email ?? "admin@refer.com"}</p>
       </div>
 
       <PremiumCard className="bg-white border-neutral-200 p-8 space-y-6">
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Account Status</p>
-            <p className="text-sm font-bold text-emerald-600">Active / Super Admin</p>
+            <p className="text-sm font-bold text-emerald-600">Active · {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}</p>
           </div>
           <div className="space-y-1 text-right">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Auth Method</p>
-            <p className="text-sm font-bold text-neutral-900">Secure SSO</p>
+            <p className="text-sm font-bold text-neutral-900">Demo SSO</p>
           </div>
         </div>
         <div className="pt-6 border-t border-neutral-100 space-y-4">
           <button className="w-full text-left bg-neutral-50 hover:bg-neutral-100 p-4 rounded-2xl border border-neutral-100 transition-colors flex items-center justify-between group">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-neutral-900">Security Keys</p>
-              <p className="text-[10px] text-neutral-400 font-bold">Manage MFA & Hardware keys</p>
+              <p className="text-[10px] text-neutral-400 font-bold">Manage MFA &amp; Hardware keys</p>
             </div>
             <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" />
           </button>
-          <button className="w-full text-left bg-neutral-50 hover:bg-neutral-100 p-4 rounded-2xl border border-neutral-100 transition-colors flex items-center justify-between group text-rose-600">
+          <button
+            onClick={onLogout}
+            className="w-full text-left bg-red-50 hover:bg-red-100 p-4 rounded-2xl border border-red-100 hover:border-red-200 transition-all flex items-center justify-between group text-rose-600"
+          >
             <div>
               <p className="text-xs font-black uppercase tracking-widest">Sign Out</p>
-              <p className="text-[10px] opacity-60 font-bold">Terminate all active sessions</p>
+              <p className="text-[10px] opacity-60 font-bold">Terminate all active sessions and return to login</p>
             </div>
-            <Activity className="w-4 h-4" />
+            <LogOut className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </PremiumCard>
