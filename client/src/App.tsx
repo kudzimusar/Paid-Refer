@@ -188,6 +188,7 @@ function AppContent() {
 
             {/* ── House Owner ── */}
             <ProtectedRoute path="/house-owner" roles={["house_owner"]} component={HouseOwnerDashboard} />
+            <ProtectedRoute path="/house-owner/properties" roles={["house_owner"]} component={HouseOwnerDashboard} />
 
             {/* ── 404 ── */}
             <Route component={NotFoundPage} />

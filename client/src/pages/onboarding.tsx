@@ -344,7 +344,7 @@ function CompletionScreen({ role }: { role: string }) {
   const { login } = useAuthContext();
 
   const ROLE_DESTINATIONS: Record<string, string> = {
-    agent: "/dashboard", customer: "/search", referrer: "/refer", admin: "/admin",
+    agent: "/dashboard", customer: "/search", referrer: "/refer", admin: "/admin", house_owner: "/house-owner",
   };
 
   const handleGoToDashboard = () => {
@@ -423,6 +423,11 @@ function CompletionScreen({ role }: { role: string }) {
           "✦ Review agent verification requests",
           "✦ Monitor network-wide POI ledger",
         ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
+        {role === "house_owner" && [
+          "✦ Manage your listed properties",
+          "✦ Connect with agents directly",
+          "✦ Claim your cashback on closed deals",
+        ].map(t => <p key={t} className="text-sm text-neutral-700">{t}</p>)}
       </div>
 
       <button
@@ -451,6 +456,7 @@ export default function OnboardingPage() {
   const isReferrer = role === "referrer";
   const isCustomer = role === "customer";
   const isAdmin = role === "admin";
+  const isHouseOwner = role === "house_owner";
   const totalSteps = isAgent || isReferrer ? 2 : 1;
 
   const STEP_LABELS = isAgent
@@ -472,7 +478,7 @@ export default function OnboardingPage() {
       return await apiRequest("PUT", "/api/auth/contact-details", data);
     },
     onSuccess: () => {
-      if (isCustomer || isAdmin) completeMutation.mutate();
+      if (isCustomer || isAdmin || isHouseOwner) completeMutation.mutate();
       else setStep(2);
     },
     onError: () => toast({ title: "Error", description: "Failed to save contact details. Please try again.", variant: "destructive" }),
