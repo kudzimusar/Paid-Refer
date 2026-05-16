@@ -96,7 +96,7 @@ export default function HouseOwnerDashboard() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }}
-              className="premium-card p-4 bg-gradient-to-br from-blue-600 to-blue-700 text-white"
+              className="p-4 rounded-[24px] shadow-sm bg-gradient-to-br from-blue-600 to-blue-700 text-white"
             >
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
                 <Wallet className="w-5 h-5 text-white" />
