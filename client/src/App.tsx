@@ -36,6 +36,10 @@ import ProfilePage from "@/pages/profile";
 import AcademyPage from "@/pages/academy";
 import AdminAgentRegistryPage from "@/pages/admin-agent-registry";
 import HouseOwnerDashboard from "@/pages/HouseOwnerDashboard";
+import HouseOwnerPropertiesPage from "@/pages/house-owner-properties";
+import HouseOwnerVerificationPage from "@/pages/house-owner-verification";
+import HouseOwnerSupportPage from "@/pages/house-owner-support";
+import HouseOwnerPreferencesPage from "@/pages/house-owner-preferences";
 
 
 // Lazy-load less-critical pages
@@ -188,7 +192,10 @@ function AppContent() {
 
             {/* ── House Owner ── */}
             <ProtectedRoute path="/house-owner" roles={["house_owner"]} component={HouseOwnerDashboard} />
-            <ProtectedRoute path="/house-owner/properties" roles={["house_owner"]} component={HouseOwnerDashboard} />
+            <ProtectedRoute path="/house-owner/properties" roles={["house_owner"]} component={HouseOwnerPropertiesPage} />
+            <ProtectedRoute path="/profile/verification" roles={["house_owner", "customer", "agent", "referrer", "admin", "super_admin"]} component={HouseOwnerVerificationPage} />
+            <ProtectedRoute path="/profile/support" roles={["house_owner", "customer", "agent", "referrer", "admin", "super_admin"]} component={HouseOwnerSupportPage} />
+            <ProtectedRoute path="/profile/preferences" roles={["house_owner", "customer", "agent", "referrer", "admin", "super_admin"]} component={HouseOwnerPreferencesPage} />
 
             {/* ── 404 ── */}
             <Route component={NotFoundPage} />

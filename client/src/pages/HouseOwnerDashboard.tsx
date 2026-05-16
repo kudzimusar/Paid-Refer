@@ -171,9 +171,11 @@ export default function HouseOwnerDashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <SectionTitle title="Your Properties" subtitle="Inventory and status" count={properties.length} />
-            <button className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
+            <Link href="/house-owner/properties">
+              <button className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors">
+                <Plus className="w-4 h-4" />
+              </button>
+            </Link>
           </div>
 
           {loadingProps ? (
@@ -204,7 +206,7 @@ export default function HouseOwnerDashboard() {
               icon={Home}
               title="No properties listed"
               description="Register your properties to start earning cashback on deals."
-              action={<button className="btn-premium px-6">List Property</button>}
+              action={<Link href="/house-owner/properties"><button className="btn-premium px-6">List Property</button></Link>}
             />
           )}
         </div>

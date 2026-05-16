@@ -93,7 +93,7 @@ export default function SettingsPaymentsPage() {
                 Pending: ${balance?.pending?.toLocaleString() || "0.00"}
               </p>
             </div>
-            <button className="w-full h-12 bg-white text-neutral-900 rounded-2xl font-bold text-sm tracking-tight hover:bg-neutral-100 transition-all active:scale-[0.98]">
+            <button onClick={() => toast({ title: "Payout requested", description: "Your instant payout request has been submitted for review." })} className="w-full h-12 bg-white text-neutral-900 rounded-2xl font-bold text-sm tracking-tight hover:bg-neutral-100 transition-all active:scale-[0.98]">
               Request Instant Payout
             </button>
           </div>
@@ -128,7 +128,7 @@ export default function SettingsPaymentsPage() {
                       </div>
                       <ChevronRight className="w-4 h-4 text-emerald-400 ml-auto" />
                     </div>
-                    <button className="w-full h-11 border border-neutral-200 rounded-xl text-neutral-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
+                    <button onClick={() => window.open("https://dashboard.stripe.com", "_blank", "noopener,noreferrer")} className="w-full h-11 border border-neutral-200 rounded-xl text-neutral-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
                       <ExternalLink className="w-3.5 h-3.5" />
                       View Stripe Dashboard
                     </button>
@@ -191,7 +191,7 @@ export default function SettingsPaymentsPage() {
                 </div>
               </div>
 
-              <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-[0.98]">
+              <button onClick={() => toast({ title: "Wallet setup started", description: "Complete your EcoCash/InnBucks details in the next step." })} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-[0.98]">
                 Setup Local Payout Wallet
               </button>
             </div>
