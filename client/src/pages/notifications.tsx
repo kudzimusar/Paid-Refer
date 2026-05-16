@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bell, CheckCircle2, MessageSquare, Zap, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,8 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuthContext();
+  const backHref = user?.role === "house_owner" ? "/house-owner" : "/search";
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
   });
@@ -32,7 +35,7 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-neutral-100 px-6 py-4">
         <div className="flex items-center space-x-4">
-          <Link href="/search">
+          <Link href={backHref}>
             <button className="p-2 -ml-2 rounded-full hover:bg-neutral-100 transition-colors">
               <ArrowLeft className="w-5 h-5 text-neutral-600" />
             </button>

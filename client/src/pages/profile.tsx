@@ -186,11 +186,11 @@ export default function ProfilePage() {
         {/* Action Menu */}
         <div className="space-y-3">
           {[
-            { icon: ShieldCheck, label: "Verification Center", color: "text-blue-600", bg: "bg-blue-50" },
-            { icon: HelpCircle, label: "Help & Support", color: "text-amber-600", bg: "bg-amber-50" },
-            { icon: Settings, label: "System Preferences", color: "text-neutral-600", bg: "bg-neutral-100" },
+            { icon: ShieldCheck, label: "Verification Center", color: "text-blue-600", bg: "bg-blue-50", href: "/profile/verification" },
+            { icon: HelpCircle, label: "Help & Support", color: "text-amber-600", bg: "bg-amber-50", href: "/profile/support" },
+            { icon: Settings, label: "System Preferences", color: "text-neutral-600", bg: "bg-neutral-100", href: "/profile/preferences" },
           ].map((item) => (
-            <button key={item.label} className="w-full flex items-center justify-between p-4 bg-white rounded-3xl shadow-sm hover:shadow-md transition-all group border border-neutral-100/50">
+            <Link key={item.label} href={item.href}><button className="w-full flex items-center justify-between p-4 bg-white rounded-3xl shadow-sm hover:shadow-md transition-all group border border-neutral-100/50">
               <div className="flex items-center space-x-4">
                 <div className={`p-2.5 ${item.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
                   <item.icon className={`w-5 h-5 ${item.color}`} />
@@ -198,7 +198,7 @@ export default function ProfilePage() {
                 <span className="font-bold text-neutral-900 text-sm tracking-tight">{item.label}</span>
               </div>
               <ChevronRight className="w-5 h-5 text-neutral-300 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </button></Link>
           ))}
         </div>
 
