@@ -64,13 +64,16 @@ export default function AdminDashboard() {
     queryFn: () => apiRequest("GET", "/api/admin/network-insights"),
   });
 
-  if (isLoading || !metrics) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary" />
-      </div>
-    );
-  }
+  const safeMetrics: AdminMetrics = metrics ?? {
+    activeUsersNow: 0,
+    openConversations: 0,
+    pendingVerifications: 0,
+    openDisputes: 0,
+    newLeadsToday: 0,
+    dealsClosedToday: 0,
+    revenueToday: 0,
+    health: { n8nStatus: "healthy", failedWorkflows: 0, unreadMessages: 0 },
+  };
 
   // Sub-route matching (base-agnostic via wouter)
   const [isUsers] = useRoute("/admin/users*");
@@ -85,14 +88,14 @@ export default function AdminDashboard() {
 
   const renderContent = () => {
     if (isUsers) return <AdminUsersView />;
-    if (isVerify) return <AdminVerifyView metrics={metrics} />;
+    if (isVerify) return <AdminVerifyView metrics={safeMetrics} />;
     if (isRegistry) return <AdminRegistryView />;
     if (isRoles) return <AdminRolesView />;
     if (isPayouts) return <AdminPayoutsView />;
     if (isSettings) return <AdminSettingsView />;
     if (isAccount) return <AdminAccountView />;
-    if (isSystem) return <AdminSystemView metrics={metrics} />;
-    return <AdminOverview metrics={metrics} aiInsights={aiInsights} />;
+    if (isSystem) return <AdminSystemView metrics={safeMetrics} />;
+    return <AdminOverview metrics={safeMetrics} aiInsights={aiInsights} />;
   };
 
   return (

@@ -241,6 +241,72 @@ export async function apiFetch<T>(
       ] as any;
     }
 
+    if (url === "/api/admin/users" || url.startsWith("/api/admin/users")) {
+      return [
+        { id: "u1", firstName: "Tendai", lastName: "Moyo", email: "tendai@refer.com", role: "agent", onboardingStatus: "completed", isVerified: true, lastActiveAt: new Date(Date.now() - 10 * 60000).toISOString() },
+        { id: "u2", firstName: "Chipo", lastName: "Dube", email: "chipo@refer.com", role: "customer", onboardingStatus: "completed", isVerified: false, lastActiveAt: new Date(Date.now() - 3600000).toISOString() },
+        { id: "u3", firstName: "Rudo", lastName: "Sithole", email: "rudo@refer.com", role: "referrer", onboardingStatus: "completed", isVerified: true, lastActiveAt: new Date(Date.now() - 86400000).toISOString() },
+        { id: "u4", firstName: "Kenji", lastName: "Sato", email: "kenji@refer.com", role: "agent", onboardingStatus: "completed", isVerified: false, lastActiveAt: null },
+        { id: "u5", firstName: "Farai", lastName: "Mutasa", email: "farai@refer.com", role: "house_owner", onboardingStatus: "completed", isVerified: true, lastActiveAt: new Date(Date.now() - 2 * 3600000).toISOString() },
+      ] as any;
+    }
+
+    if (url === "/api/admin/verifications" || url.startsWith("/api/admin/verifications")) {
+      if (options.method === 'POST') return { success: true } as any;
+      return [
+        { id: "v1", userName: "Kenji", userLastName: "Sato", documentType: "Real Estate License", confidence: 0.94, createdAt: new Date(Date.now() - 30 * 60000).toISOString() },
+        { id: "v2", userName: "Farai", userLastName: "Chigwanda", documentType: "National ID", confidence: 0.87, createdAt: new Date(Date.now() - 90 * 60000).toISOString() },
+        { id: "v3", userName: "Blessing", userLastName: "Moyo", documentType: "Agent License", confidence: 0.76, createdAt: new Date(Date.now() - 3 * 3600000).toISOString() },
+      ] as any;
+    }
+
+    if (url === "/api/admin/payouts" || url.startsWith("/api/admin/payouts")) {
+      if (options.method === 'POST') return { success: true } as any;
+      return [
+        { id: "p1", agentName: "Elite", agentLastName: "Realty", referrerName: "Rudo", referrerLastName: "S.", amount: "450.00", status: "pending" },
+        { id: "p2", agentName: "Sato", agentLastName: "Properties", referrerName: "Tendai", referrerLastName: "M.", amount: "210.00", status: "pending" },
+        { id: "p3", agentName: "Prime", agentLastName: "Estates", referrerName: "Chipo", referrerLastName: "D.", amount: "75.00", status: "paid" },
+      ] as any;
+    }
+
+    if (url === "/api/admin/network-insights") {
+      return {
+        networkHealth: 84,
+        executiveSummary: "The referral network shows strong growth with 42 active nodes. Agent conversion rates are up 12% this week, driven by AI-assisted matching. Three high-value referrer chains are generating outsized returns in Borrowdale.",
+        topOpportunities: [
+          "Expand agent coverage in Avondale — 18 pending customer requests unmatched.",
+          "Upgrade 4 referrers to premium tier to unlock advanced commission structures.",
+          "Deploy automated follow-up sequences to 12 dormant leads older than 48h."
+        ],
+        riskFactors: [
+          "2 agents with verification expiring in 7 days",
+          "1 referrer account flagged for unusual link-click patterns"
+        ],
+        growthProjection: "+34% MoM"
+      } as any;
+    }
+
+    if (url === "/api/admin/system/status") {
+      return {
+        version: "2.4.1",
+        subsystems: { database: "healthy", ai: "healthy", gateway: "healthy", storage: "healthy" }
+      } as any;
+    }
+
+    if (url === "/api/admin/agent-registry") {
+      return [
+        { id: "ar1", name: "Takudzwa Moyo", agency: "Prime Properties Zimbabwe", country: "ZW", trustScore: 94 },
+        { id: "ar2", name: "Sarah Johnson", agency: "JHB Elite Realty", country: "ZA", trustScore: 88 },
+        { id: "ar3", name: "Hiroshi Tanaka", agency: "Tokyo Residential", country: "JP", trustScore: 96 },
+        { id: "ar4", name: "Chiedza Mupfumira", agency: "Harare Metro Agents", country: "ZW", trustScore: 79 },
+        { id: "ar5", name: "Nomsa Dlamini", agency: "Cape Town Living", country: "ZA", trustScore: 91 },
+      ] as any;
+    }
+
+    if (url.startsWith("/api/admin/users/") && options.method === 'PATCH') {
+      return { success: true } as any;
+    }
+
     if (url.startsWith("/api/")) {
       return { success: true, data: [] } as any;
     }

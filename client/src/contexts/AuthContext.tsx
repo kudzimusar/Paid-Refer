@@ -6,7 +6,7 @@ import { isDemoMode } from "../lib/demoMode";
 interface AuthUser {
   userId: string;
   id?: string;
-  role: "agent" | "customer" | "referrer" | "admin" | "house_owner";
+  role: "agent" | "customer" | "referrer" | "admin" | "super_admin" | "house_owner";
   country: "ZW" | "ZA" | "JP";
   city?: string;
   name: string;
