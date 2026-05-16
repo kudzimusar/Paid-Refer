@@ -101,8 +101,8 @@ export default function HouseOwnerDashboard() {
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">Total Cashback</p>
-              <p className="text-xl font-bold mt-1">${earnedCashback.toFixed(2)}</p>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-80">Total Cashback</p>
+              <p className="text-2xl font-bold mt-1">${earnedCashback.toFixed(2)}</p>
             </motion.div>
 
             <motion.div 
@@ -114,8 +114,8 @@ export default function HouseOwnerDashboard() {
               <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-3">
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Pending</p>
-              <p className="text-xl font-bold mt-1 text-neutral-900">{pendingConfirmations.length}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pending</p>
+              <p className="text-2xl font-bold mt-1 text-neutral-900">{pendingConfirmations.length}</p>
             </motion.div>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function HouseOwnerDashboard() {
                       confirmMutation.mutate(lead.id);
                     }}
                     disabled={confirmingId === lead.id}
-                    className="w-full btn-premium py-2 text-sm flex items-center justify-center gap-2"
+                    className="w-full btn-premium min-h-[48px] text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
                     {confirmingId === lead.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                     Verify & Claim Cashback
@@ -215,7 +215,7 @@ export default function HouseOwnerDashboard() {
           <div className="space-y-2">
             {leads.filter(l => l.houseOwnerConfirmedAt).length > 0 ? (
               leads.filter(l => l.houseOwnerConfirmedAt).map(l => (
-                <div key={l.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                <div key={l.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-100 transition-colors min-h-[56px]">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
                       <TrendingUp className="w-4 h-4 text-emerald-600" />

@@ -37,6 +37,9 @@ import { NavLogo } from "@/components/ui/Logo";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useAdminNav } from "@/contexts/AdminNavContext";
+import type { AdminView } from "@/contexts/AdminNavContext";
+
 
 interface AdminMetrics {
   activeUsersNow: number;
@@ -53,7 +56,7 @@ interface AdminMetrics {
   };
 }
 
-type AdminView = "overview" | "users" | "verify" | "registry" | "roles" | "payouts" | "settings" | "account" | "system";
+
 
 const NAV_VIEWS: { view: AdminView; label: string; icon: React.ReactNode }[] = [
   { view: "overview",  label: "Pulse",     icon: <Activity className="w-3.5 h-3.5" /> },
@@ -66,7 +69,7 @@ const NAV_VIEWS: { view: AdminView; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AdminDashboard() {
-  const [view, setView] = React.useState<AdminView>("overview");
+  const { view, setView } = useAdminNav();
   const { logout } = useAuthContext();
   const { toast } = useToast();
 
@@ -266,49 +269,79 @@ function AdminOverview({ metrics, aiInsights, onNavigate }: { metrics: AdminMetr
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Top Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          label="Active Now" 
-          value={metrics.activeUsersNow} 
-          trend="+5%" 
-          icon={<Zap className="text-amber-400" />} 
-        />
-        <StatCard 
-          label="Pending Verification" 
-          value={metrics.pendingVerifications} 
-          trend="-2" 
-          icon={<ShieldCheck className="text-blue-400" />} 
-          alert={metrics.pendingVerifications > 10}
-        />
-        <StatCard 
-          label="Daily Revenue" 
-          value={`$${metrics.revenueToday}`} 
-          trend="+24%" 
-          icon={<CreditCard className="text-emerald-400" />} 
-        />
-        <StatCard 
-          label="Active Disputes" 
-          value={metrics.openDisputes} 
-          trend="Stable" 
-          icon={<AlertCircle className="text-red-400" />} 
-          alert={metrics.openDisputes > 0}
-        />
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* ── Mobile stat chips (2×2) / Desktop 4-col ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Chip 1 */}
+        <button
+          onClick={() => onNavigate?.("overview")}
+          className="group bg-white border border-neutral-200 rounded-2xl p-4 text-left hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Zap className="w-4 h-4 text-amber-500" />
+            </div>
+            <span className="text-xs font-bold text-emerald-500">+5%</span>
+          </div>
+          <p className="text-2xl font-black text-neutral-900 leading-none">{metrics.activeUsersNow}</p>
+          <p className="text-xs font-semibold text-neutral-400 mt-1">Active Now</p>
+        </button>
+        {/* Chip 2 */}
+        <button
+          onClick={() => onNavigate?.("verify")}
+          className="group bg-white border border-neutral-200 rounded-2xl p-4 text-left hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-blue-500" />
+            </div>
+            <span className="text-xs font-bold text-red-400">-2</span>
+          </div>
+          <p className="text-2xl font-black text-neutral-900 leading-none">{metrics.pendingVerifications}</p>
+          <p className="text-xs font-semibold text-neutral-400 mt-1">Pending Verify</p>
+        </button>
+        {/* Chip 3 */}
+        <button
+          onClick={() => onNavigate?.("payouts")}
+          className="group bg-white border border-neutral-200 rounded-2xl p-4 text-left hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-emerald-500" />
+            </div>
+            <span className="text-xs font-bold text-emerald-500">+24%</span>
+          </div>
+          <p className="text-2xl font-black text-neutral-900 leading-none">${metrics.revenueToday}</p>
+          <p className="text-xs font-semibold text-neutral-400 mt-1">Revenue Today</p>
+        </button>
+        {/* Chip 4 */}
+        <button
+          onClick={() => onNavigate?.("users")}
+          className="group bg-white border border-neutral-200 rounded-2xl p-4 text-left hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-red-400" />
+            </div>
+            <span className={`text-xs font-bold ${metrics.openDisputes > 0 ? "text-red-500" : "text-neutral-400"}`}>Disputes</span>
+          </div>
+          <p className="text-2xl font-black text-neutral-900 leading-none">{metrics.openDisputes}</p>
+          <p className="text-xs font-semibold text-neutral-400 mt-1">Open Disputes</p>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Feed / Operations */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-5">
           <PremiumCard className="bg-white border-neutral-200">
-            <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+            <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900">Verification Queue</h3>
-                <p className="text-xs text-neutral-500">Entities awaiting ecosystem validation</p>
+                <h3 className="text-base font-bold text-neutral-900">Verification Queue</h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Entities awaiting ecosystem validation</p>
               </div>
               <button 
-                onClick={() => setLocation("/admin/verify")}
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                onClick={() => onNavigate?.("verify")}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 min-h-[36px] px-2"
               >
                 View All <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -408,8 +441,8 @@ function AdminOverview({ metrics, aiInsights, onNavigate }: { metrics: AdminMetr
               <PayoutItem agent="Elite Realty" amount={450.00} date="Today" />
               <PayoutItem agent="Sato Properties" amount={210.00} date="2h ago" />
               <button 
-                onClick={() => setLocation("/admin/payouts")}
-                className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm transition-all mt-2"
+                onClick={() => onNavigate?.("payouts")}
+                className="w-full min-h-[48px] bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm transition-all mt-2 active:scale-[0.98]"
               >
                 Manage Payouts
               </button>

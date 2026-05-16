@@ -9,6 +9,7 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { AIEventBusProvider } from "./contexts/AIEventBusContext";
 import { ProofOfIntroductionProvider } from "./contexts/ProofOfIntroductionContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { AdminNavProvider } from "./contexts/AdminNavContext";
 import { RoleSwitcher } from "@/components/demo/RoleSwitcher";
 import { AIActivityIndicator } from "@/components/demo/AIActivityIndicator";
 import { GuidedTourController } from "@/components/demo/GuidedTourController";
@@ -170,7 +171,13 @@ function AppContent() {
             <ProtectedRoute path="/agent/verify" roles={["agent"]} component={VerifyAgentPage} />
             
             {/* ── Admin ── */}
-            <ProtectedRoute path="/admin*" roles={["admin", "super_admin"]} component={AdminDashboard} />
+            <Route path="/admin*">
+              {({ ...props }) => (
+                <AdminNavProvider>
+                  <ProtectedRoute path="/admin*" roles={["admin", "super_admin"]} component={AdminDashboard} />
+                </AdminNavProvider>
+              )}
+            </Route>
 
 
             {/* ── Customer ── */}
